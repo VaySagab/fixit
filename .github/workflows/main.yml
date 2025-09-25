@@ -126,29 +126,30 @@ jobs:
           Set-Service -Name SysMain -StartupType Disabled -ErrorAction SilentlyContinue
           Write-Host "✅ Optimization done."
 
-      - name: 🎮 Install MEmu Play (Android 7.1, Roblox compatible)
+      - name: 📥 Download & Install MEmu 9.2.8
         run: |
-          $url = "https://download.memuplay.com/installer/20200707/Memu-Setup-7.5.6.exe"
+          $url = "https://filehippo.com/download_memu/download/3a9ef6c3f71bbd93b6f5bf86d0d7a8e0/"
           $installer = "$env:TEMP\memu_setup.exe"
           Invoke-WebRequest -Uri $url -OutFile $installer -UseBasicParsing
-          Start-Process -FilePath $installer -ArgumentList "/silent" -Wait
-          Write-Host "✅ MEmu 7.5.6 installed."
+          Start-Process $installer -ArgumentList "/silent" -Wait
 
-      - name: 🎮 Install Roblox (latest APK)
+      - name: 📥 Download Roblox APK (latest)
         run: |
           $url = "https://apkcombo.com/roblox/com.roblox.client/download/apk" 
           $apk = "$env:TEMP\roblox.apk"
           Invoke-WebRequest -Uri $url -OutFile $apk -UseBasicParsing
-          & "C:\Program Files\Microvirt\MEmu\MEmuConsole.exe" installapk Roblox $apk
-          Write-Host "✅ Roblox APK installed on MEmu."
 
-      - name: 🔄 Install Auto Clicker
+      - name: 📥 Download Auto Clicker APK
         run: |
           $url = "https://apkcombo.com/auto-clicker/com.truedevelopersstudio.automatictap.autoclicker/download/apk"
-          $apk = "$env:TEMP\autoclicker.apk"
-          Invoke-WebRequest -Uri $url -OutFile $apk -UseBasicParsing
-          & "C:\Program Files\Microvirt\MEmu\MEmuConsole.exe" installapk AutoClicker $apk
-          Write-Host "✅ Auto Clicker APK installed on MEmu."
+          $apk2 = "$env:TEMP\autoclicker.apk"
+          Invoke-WebRequest -Uri $url -OutFile $apk2 -UseBasicParsing
+
+      - name: 📦 Install APKs into MEmu
+        run: |
+          cd "C:\Program Files\Microvirt\MEmu"
+          .\adb.exe install "$env:TEMP\roblox.apk"
+          .\adb.exe install "$env:TEMP\autoclicker.apk"
 
       - name: 📋 RDP Summary
         run: |

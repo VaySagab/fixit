@@ -129,22 +129,19 @@ jobs:
       - name: 📥 Download & Install MuMu v5.0.4
         shell: pwsh
         run: |
-          $fileId = "12JKx7Uln02lbPRM_0NI436gMjHSbZJqv"
-          $url = "https://drive.google.com/uc?export=download&id=$fileId"
+          $url = "https://down.sandai.net/mumu/MuMuInstaller_5.0.4.exe"
           $installer = "$env:TEMP\mumu_5.0.4.exe"
 
           Write-Host "📥 Downloading MuMu v5.0.4..."
-          # Gunakan curl biar lebih aman ambil dari Google Drive
-          curl -L -o $installer $url
+          curl.exe -L -o $installer $url
 
           if (-not (Test-Path $installer)) {
-            Write-Error "❌ Download failed! File not found: $installer"
+            Write-Error "❌ Download failed!"
             exit 1
           }
 
           Write-Host "⚙️ Installing MuMu v5.0.4..."
           Start-Process -FilePath $installer -ArgumentList "/silent" -Wait -WorkingDirectory (Split-Path $installer)
-
           Write-Host "✅ MuMu v5.0.4 installed."
 
       - name: 📲 Install Roblox + Auto Clicker

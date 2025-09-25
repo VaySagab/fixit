@@ -126,12 +126,16 @@ jobs:
           Set-Service -Name SysMain -StartupType Disabled -ErrorAction SilentlyContinue
           Write-Host "✅ Optimization done."
 
-      - name: 📥 Download & Install MuMu Player Lite
+      - name: 📥 Download & Install MuMu v5.0.4
         run: |
-          $url = "https://ota-dl-netease-com.feiniaomy.com/mumu/global/202307171856/MuMuPlayer12-Setup-1.0.7.3-global.exe"
-          $installer = "$env:TEMP\mumu_setup.exe"
-          Invoke-WebRequest -Uri $url -OutFile $installer
-          Start-Process $installer -ArgumentList "/silent" -Wait
+          $fileId = "12JKx7Uln02lbPRM_0NI436gMjHSbZJqv"
+          $url = "https://drive.google.com/uc?export=download&id=$fileId"
+          $installer = "$env:TEMP\mumu_5.0.4.exe"
+          Write-Host "📥 Downloading MuMu v5.0.4 from Google Drive..."
+          Invoke-WebRequest -Uri $url -OutFile $installer -UseBasicParsing
+          Write-Host "⚙️ Installing MuMu v5.0.4..."
+          Start-Process -FilePath $installer -ArgumentList "/silent" -Wait
+          Write-Host "✅ MuMu v5.0.4 installed."
 
       - name: 📲 Install Roblox + Auto Clicker
         run: |

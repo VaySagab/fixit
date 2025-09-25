@@ -128,7 +128,7 @@ jobs:
 
       - name: 📥 Download & Install MEmu 9.2.8
         run: |
-          $url = "https://filehippo.com/download_memu/download/3a9ef6c3f71bbd93b6f5bf86d0d7a8e0/"
+          $url = "https://cdn.memuplay.com/download/Memurunner9.2.8.exe"
           $installer = "$env:TEMP\memu_setup.exe"
           Invoke-WebRequest -Uri $url -OutFile $installer -UseBasicParsing
           Start-Process $installer -ArgumentList "/silent" -Wait

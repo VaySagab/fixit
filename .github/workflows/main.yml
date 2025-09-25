@@ -127,17 +127,28 @@ jobs:
           Write-Host "✅ Optimization done."
 
       - name: 📥 Download & Install MuMu v5.0.4
+        shell: pwsh
         run: |
           $fileId = "12JKx7Uln02lbPRM_0NI436gMjHSbZJqv"
           $url = "https://drive.google.com/uc?export=download&id=$fileId"
           $installer = "$env:TEMP\mumu_5.0.4.exe"
-          Write-Host "📥 Downloading MuMu v5.0.4 from Google Drive..."
-          Invoke-WebRequest -Uri $url -OutFile $installer -UseBasicParsing
+
+          Write-Host "📥 Downloading MuMu v5.0.4..."
+          # Gunakan curl biar lebih aman ambil dari Google Drive
+          curl -L -o $installer $url
+
+          if (-not (Test-Path $installer)) {
+            Write-Error "❌ Download failed! File not found: $installer"
+            exit 1
+          }
+
           Write-Host "⚙️ Installing MuMu v5.0.4..."
-          Start-Process -FilePath $installer -ArgumentList "/silent" -Wait
+          Start-Process -FilePath $installer -ArgumentList "/silent" -Wait -WorkingDirectory (Split-Path $installer)
+
           Write-Host "✅ MuMu v5.0.4 installed."
 
       - name: 📲 Install Roblox + Auto Clicker
+        shell: pwsh
         run: |
           $adb = "C:\Program Files\Netease\MuMuPlayer-12.0\adb.exe"
           $emu = "C:\Program Files\Netease\MuMuPlayer-12.0\MuMuPlayer.exe"
@@ -146,11 +157,19 @@ jobs:
           Start-Process $emu
           Start-Sleep -Seconds 40   # tunggu boot emulator
 
+          # Download APK Roblox
+          $robloxApk = "$env:TEMP\roblox.apk"
+          curl -L -o $robloxApk "https://d.apkpure.com/b/APK/com.roblox.client?version=latest"
+
+          # Download APK AutoClicker
+          $autoClickerApk = "$env:TEMP\autoclicker.apk"
+          curl -L -o $autoClickerApk "https://d.apkpure.com/b/APK/com.truedevelopersstudio.automatictap.autoclicker?version=latest"
+
           Write-Host "📲 Installing Roblox..."
-          & $adb install "https://play.google.com/store/apps/details?id=com.roblox.client"
+          & $adb install $robloxApk
 
           Write-Host "📲 Installing Auto Clicker..."
-          & $adb install "https://play.google.com/store/apps/details?id=com.truedevelopersstudio.automatictap.autoclicker"
+          & $adb install $autoClickerApk
 
       - name: ✅ Done
         run: Write-Host "MuMu Player + Roblox + Auto Clicker installed!"

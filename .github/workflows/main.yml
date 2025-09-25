@@ -143,14 +143,14 @@ jobs:
           $size = (Get-Item $installer).Length
           Write-Host "Downloaded size: $size bytes"
 
-          # minimal 500 MB biar yakin bukan HTML error page
           if ($size -lt 500000000) {
             Write-Error "❌ Downloaded file too small, invalid installer."
             exit 1
           }
 
           Write-Host "⚙️ Installing MuMu Player 5.6.1..."
-          Start-Process -FilePath $installer -ArgumentList "/silent" -Wait -WorkingDirectory (Split-Path $installer)
+          # NSIS biasanya pakai /S (huruf besar)
+          Start-Process -FilePath $installer -ArgumentList "/S" -Wait -NoNewWindow
 
           Write-Host "✅ MuMu Player 5.6.1 installed successfully."
 

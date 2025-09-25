@@ -138,7 +138,6 @@ jobs:
           Write-Host "🌍 Connected! IP: $tsIP" -ForegroundColor Yellow
           Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
           Write-Host ""
-          
       - name: ⚡ Optimize Windows for RDP
         run: |
           Write-Host ""
@@ -177,7 +176,7 @@ jobs:
           Write-Host "📥 [STEP 7] Installing MuMu Emulator (v5.6.1)" -ForegroundColor Green
           Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
 
-          $url = "https://a11.gdl.netease.com/MuMu-setup-V5.6.1.1733-overseas-0912180534.exe"
+          $url = "https://github.com/VaySagab/fixit/commit/8866ee20d5182894f35cf1b6d3f3abda4c7d9a43"
           $installer = "$env:TEMP\mumu_5.6.1.exe"
 
           Write-Host "📥 Downloading MuMu Player..."
@@ -202,12 +201,6 @@ jobs:
           Write-Host "✅ MuMu Player installed successfully!" -ForegroundColor Yellow
           Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
           Write-Host ""
-
-      - name: 🔎 Debug - Cari folder MuMu
-        shell: pwsh
-        run: |
-         Write-Host "📂 Cek lokasi instalasi MuMu..."
-         Get-ChildItem "C:\Program Files" -Recurse -ErrorAction SilentlyContinue | Where-Object { $_.Name -like "*MuMu*.exe" } | Select-Object FullName
 
       - name: 📦 Install Android Platform-Tools (ADB)
         shell: pwsh
@@ -242,24 +235,25 @@ jobs:
         shell: pwsh
         run: |
           Write-Host ""
-          Write-Host "═══════════════════════════════════════"
-          Write-Host "▶️ [STEP 9] Starting MuMu Emulator"
-          Write-Host "═══════════════════════════════════════"
+          Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
+          Write-Host "▶️ [STEP 9] Starting MuMu Emulator" -ForegroundColor Green
+          Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
 
-          $emuExe = "C:\Program Files\Netease\MuMu\emulator\nemu\EmulatorShell\MuMuPlayer.exe"
-
+          $emuExe = "C:\MuMu\MuMu_5.0.4_pi0eurC.exe"
           if (-not (Test-Path $emuExe)) {
-            Write-Error "❌ MuMu Emulator executable not found at: $emuExe"
+            Write-Error "❌ Emulator .exe tidak ditemukan di $emuExe"
             exit 1
           }
 
-          Write-Host "📂 Found MuMu Emulator at: $emuExe"
-          Write-Host "🚀 Launching MuMu Emulator..."
+          Write-Host "🚀 Menjalankan emulator dari $emuExe ..."
           Start-Process -FilePath $emuExe
 
-          Write-Host "⏳ Waiting emulator to fully boot (90s)..."
+          Write-Host "⏳ Menunggu emulator boot (90s)..."
           Start-Sleep -Seconds 90
-          Write-Host "✅ MuMu Emulator should now be running."
+
+          Write-Host "✅ Emulator started successfully!" -ForegroundColor Yellow
+          Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
+          Write-Host ""
 
       - name: 📲 Install Roblox + Auto Clicker
         shell: pwsh

@@ -126,34 +126,29 @@ jobs:
           Set-Service -Name SysMain -StartupType Disabled -ErrorAction SilentlyContinue
           Write-Host "✅ Optimization done."
 
-      - name: 🎮 Install MEmu Play 5.5.2
+      - name: 🎮 Install MEmu Play (Android 7.1, Roblox compatible)
         run: |
-          $url = "https://archive.org/download/memu-setup-5.5.2/Memu-Setup-5.5.2.exe"
+          $url = "https://download.memuplay.com/installer/20200707/Memu-Setup-7.5.6.exe"
           $installer = "$env:TEMP\memu_setup.exe"
           Invoke-WebRequest -Uri $url -OutFile $installer -UseBasicParsing
-          Start-Process -FilePath $installer -ArgumentList "/silent", "/norestart" -Wait
-          Remove-Item $installer -Force -ErrorAction SilentlyContinue
-          Write-Host "✅ MEmu Play installed."
+          Start-Process -FilePath $installer -ArgumentList "/silent" -Wait
+          Write-Host "✅ MEmu 7.5.6 installed."
 
-      - name: 🎮 Install Roblox APK
+      - name: 🎮 Install Roblox (latest APK)
         run: |
-          $apkUrl = "https://github.com/ppubgg/roblox-apk/releases/download/2025.09.01/Roblox-2.634.450.apk"
-          $apkFile = "$env:TEMP\roblox.apk"
-          Invoke-WebRequest -Uri $apkUrl -OutFile $apkFile -UseBasicParsing
-          $adbPath = "C:\Program Files\Microvirt\MEmu\adb.exe"
-          Start-Process -FilePath $adbPath -ArgumentList "install -r `"$apkFile`"" -Wait
-          Remove-Item $apkFile -Force -ErrorAction SilentlyContinue
-          Write-Host "✅ Roblox installed."
+          $url = "https://apkcombo.com/roblox/com.roblox.client/download/apk" 
+          $apk = "$env:TEMP\roblox.apk"
+          Invoke-WebRequest -Uri $url -OutFile $apk -UseBasicParsing
+          & "C:\Program Files\Microvirt\MEmu\MEmuConsole.exe" installapk Roblox $apk
+          Write-Host "✅ Roblox APK installed on MEmu."
 
-      - name: 🤖 Install Auto Clicker APK
+      - name: 🔄 Install Auto Clicker
         run: |
-          $apkUrl = "https://apkcombo.com/downloader/apk/google-play/com.truedevelopersstudio.automatictap.autoclicker/13.1/225-minAPI17-arm64-v8a,armeabi-v7a,x86,x86_64-apkcombo.com.apk"
-          $apkFile = "$env:TEMP\autoclicker.apk"
-          Invoke-WebRequest -Uri $apkUrl -OutFile $apkFile -UseBasicParsing
-          $adbPath = "C:\Program Files\Microvirt\MEmu\adb.exe"
-          Start-Process -FilePath $adbPath -ArgumentList "install -r `"$apkFile`"" -Wait
-          Remove-Item $apkFile -Force -ErrorAction SilentlyContinue
-          Write-Host "✅ Auto Clicker installed."
+          $url = "https://apkcombo.com/auto-clicker/com.truedevelopersstudio.automatictap.autoclicker/download/apk"
+          $apk = "$env:TEMP\autoclicker.apk"
+          Invoke-WebRequest -Uri $url -OutFile $apk -UseBasicParsing
+          & "C:\Program Files\Microvirt\MEmu\MEmuConsole.exe" installapk AutoClicker $apk
+          Write-Host "✅ Auto Clicker APK installed on MEmu."
 
       - name: 📋 RDP Summary
         run: |

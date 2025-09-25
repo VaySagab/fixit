@@ -190,7 +190,7 @@ jobs:
 
           # Contoh install APK Roblox
           $robloxApk = "$env:TEMP\roblox.apk"
-          Invoke-WebRequest -Uri "https://example.com/roblox.apk" -OutFile $robloxApk
+          Invoke-WebRequest -Uri "https://www.softonic-id.com/download/roblox/android/post-download/v/2.633.513?dt=internalDownload&_gl=1*4vjh65*_gcl_aw*R0NMLjE3NTg4MTkzMjUuQ2owS0NRancwTlBHQmhDREFSSXNBR0F6cHAySHJKMzJMajhTVVJ1a3lwWEFxQlhOdUR5bElNaVRxbUk2RGhWUWhhaGRNY1hQOEY1V2RoUWFBdWlwRUFMd193Y0I.*_gcl_au*MjI4MTA5MTUzLjE3NTg4MTkzMDQ." -OutFile $robloxApk
 
           Write-Host "📦 Installing Roblox..."
           & $adb install -r $robloxApk

@@ -126,13 +126,13 @@ jobs:
           Set-Service -Name SysMain -StartupType Disabled -ErrorAction SilentlyContinue
           Write-Host "✅ Optimization done."
 
-      - name: 📥 Download & Install MuMu v5.0.4
+      - name: 📥 Download & Install MuMu Player 5.6.1 (Official)
         shell: pwsh
         run: |
-          $url = "https://down.sandai.net/mumu/MuMuInstaller_5.0.4.exe"
-          $installer = "$env:TEMP\mumu_5.0.4.exe"
+          $url = "https://a11.gdl.netease.com/MuMu-setup-V5.6.1.1733-overseas-0912180534.exe"
+          $installer = "$env:TEMP\mumu_5.6.1.exe"
 
-          Write-Host "📥 Downloading MuMu v5.0.4..."
+          Write-Host "📥 Downloading MuMu Player 5.6.1..."
           curl.exe -L -o $installer $url
 
           if (-not (Test-Path $installer)) {
@@ -140,9 +140,19 @@ jobs:
             exit 1
           }
 
-          Write-Host "⚙️ Installing MuMu v5.0.4..."
+          $size = (Get-Item $installer).Length
+          Write-Host "Downloaded size: $size bytes"
+
+          # minimal 500 MB biar yakin bukan HTML error page
+          if ($size -lt 500000000) {
+            Write-Error "❌ Downloaded file too small, invalid installer."
+            exit 1
+          }
+
+          Write-Host "⚙️ Installing MuMu Player 5.6.1..."
           Start-Process -FilePath $installer -ArgumentList "/silent" -Wait -WorkingDirectory (Split-Path $installer)
-          Write-Host "✅ MuMu v5.0.4 installed."
+
+          Write-Host "✅ MuMu Player 5.6.1 installed successfully."
 
       - name: 📲 Install Roblox + Auto Clicker
         shell: pwsh

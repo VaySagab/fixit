@@ -1,0 +1,202 @@
+name: 🚀 Vayvy RDP (Tailscale Edition)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  secure-rdp:
+    runs-on: windows-latest
+    timeout-minutes: 720   # max 12 jam
+
+    steps:
+      - name: ⚙️ Configure RDP & Firewall
+        run: |
+          Write-Host "🔧 Enabling RDP and configuring firewall..."
+
+          # Enable RDP
+          Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' `
+                           -Name "fDenyTSConnections" -Value 0 -Force
+          Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' `
+                           -Name "UserAuthentication" -Value 0 -Force
+          Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' `
+                           -Name "SecurityLayer" -Value 0 -Force
+
+          # Firewall (restrict to Tailscale subnet only)
+          netsh advfirewall firewall delete rule name="RDP-Tailscale" > $null 2>&1
+          netsh advfirewall firewall add rule name="RDP-Tailscale" `
+            dir=in action=allow protocol=TCP localport=3389 remoteip=100.64.0.0/10
+
+          Restart-Service -Name TermService -Force
+          Write-Host "✅ RDP service enabled and firewall configured!"
+
+      - name: 👤 Create RDP User with 4-letter Password
+        run: |
+          Write-Host "👤 Creating user 'Vayvy' with 4-letter password (letters only)..."
+
+          # generate 4-letter lowercase password
+          $letters = @('a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v','w','x','y','z')
+          $password = -join (1..4 | ForEach-Object { $letters | Get-Random })
+
+          $securePass = ConvertTo-SecureString $password -AsPlainText -Force
+
+          if (-not (Get-LocalUser -Name "Vayvy" -ErrorAction SilentlyContinue)) {
+              New-LocalUser -Name "Vayvy" -Password $securePass -AccountNeverExpires -PasswordNeverExpires
+          } else {
+              try { Set-LocalUser -Name "Vayvy" -Password $securePass } catch {}
+          }
+
+          Add-LocalGroupMember -Group "Administrators" -Member "Vayvy" -ErrorAction SilentlyContinue
+          Add-LocalGroupMember -Group "Remote Desktop Users" -Member "Vayvy" -ErrorAction SilentlyContinue
+
+          # export credentials to GitHub env
+          Add-Content -Path $env:GITHUB_ENV -Value "RDP_USER=Vayvy"
+          Add-Content -Path $env:GITHUB_ENV -Value "RDP_PASS=$password"
+
+          Write-Host "✅ User created. (RDP_USER & RDP_PASS exported to GITHUB_ENV)"
+
+      - name: 💻 Show System Info
+        run: |
+          Write-Host "ℹ️ Gathering system information..."
+          systeminfo | Select-String "OS Name","OS Version","System Type","Total Physical Memory"
+          Get-CimInstance Win32_Processor | Select-Object Name,NumberOfCores,NumberOfLogicalProcessors
+
+      - name: 💽 Disk Usage Info (GB)
+        run: |
+          Write-Host "💽 Disk usage (GB):"
+          Get-CimInstance Win32_LogicalDisk -Filter "DriveType=3" |
+            Select-Object `
+              @{Name='Drive';Expression={$_.DeviceID}},
+              @{Name='TotalGB';Expression={[math]::Round($_.Size/1GB,2)}},
+              @{Name='FreeGB';Expression={[math]::Round($_.FreeSpace/1GB,2)}},
+              @{Name='UsedGB';Expression={[math]::Round( (($_.Size - $_.FreeSpace)/1GB),2)} } |
+            Format-Table -AutoSize
+
+      - name: 🌐 Install Tailscale
+        run: |
+          Write-Host "🌐 Installing Tailscale..."
+          $tsUrl = "https://pkgs.tailscale.com/stable/tailscale-setup-1.82.0-amd64.msi"
+          $installerPath = "$env:TEMP\tailscale.msi"
+          Invoke-WebRequest -Uri $tsUrl -OutFile $installerPath
+          Start-Process msiexec.exe -ArgumentList "/i", "`"$installerPath`"", "/quiet", "/norestart" -Wait
+          Remove-Item $installerPath -Force -ErrorAction SilentlyContinue
+          Write-Host "✅ Tailscale installed."
+
+      - name: 🔗 Connect to Tailscale
+        env:
+          TAILSCALE_AUTH_KEY: ${{ secrets.TAILSCALE_AUTH_KEY }}
+        run: |
+          Write-Host "🔗 Connecting to Tailscale network..."
+
+          $tsExe = Get-Command tailscale.exe -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Source -ErrorAction SilentlyContinue
+          if (-not $tsExe) {
+              $possible = @(
+                  "$env:ProgramFiles\Tailscale\tailscale.exe",
+                  "$env:ProgramFiles(x86)\Tailscale\tailscale.exe"
+              )
+              foreach ($p in $possible) { if (Test-Path $p) { $tsExe = $p; break } }
+          }
+
+          if (-not $tsExe) { Write-Error "❌ tailscale.exe not found."; exit 1 }
+
+          & $tsExe up --authkey=$env:TAILSCALE_AUTH_KEY --hostname="gh-runner-$env:GITHUB_RUN_ID" --accept-routes
+          if ($LASTEXITCODE -ne 0) { Write-Error "❌ Tailscale up failed"; exit 1 }
+
+          $tsIP = $null
+          $retries = 0
+          while (-not $tsIP -and $retries -lt 12) {
+              Start-Sleep -Seconds 5
+              $ipOut = & $tsExe ip -4 2>$null
+              if ($ipOut) {
+                  $tsIP = ($ipOut | Where-Object { $_ -match '^\d+\.\d+\.\d+\.\d+$' } | Select-Object -First 1)
+              }
+              $retries++
+          }
+
+          if (-not $tsIP) { Write-Error "❌ No Tailscale IP assigned."; exit 1 }
+
+          Add-Content -Path $env:GITHUB_ENV -Value "TAILSCALE_IP=$tsIP"
+          Write-Host "✅ Connected! Tailscale IP: $tsIP"
+
+      - name: 🛡️ Verify RDP Port
+        run: |
+          Write-Host "🔎 Verifying RDP port over Tailscale..."
+          if (-not $env:TAILSCALE_IP) { Write-Error "❌ TAILSCALE_IP not set."; exit 1 }
+          $testResult = Test-NetConnection -ComputerName $env:TAILSCALE_IP -Port 3389 -WarningAction SilentlyContinue
+          if (-not $testResult.TcpTestSucceeded) { Write-Error "❌ TCP connection failed"; exit 1 }
+          Write-Host "✅ RDP port 3389 is open and accessible!"
+
+      - name: 📋 RDP Access Summary
+        run: |
+          Write-Host "📝 Writing RDP summary..."
+
+          $summary = "## 🔑 RDP Access Information`n" +
+                     "| Field     | Value             |`n" +
+                     "|-----------|-------------------|`n" +
+                     "| Address   | $env:TAILSCALE_IP |`n" +
+                     "| Username  | $env:RDP_USER     |`n" +
+                     "| Password  | $env:RDP_PASS     |`n`n" +
+                     "👉 Use **Remote Desktop Connection (mstsc.exe)** on Windows`n" +
+                     "👉 Or **Remmina** on Linux / MacOS.`n`n" +
+                     "🕒 Session will stay alive for **12 hours** max.`n`n" +
+                     "---`n" +
+                     "🔖 Watermark: RDP Made by **VayVy**, IG: vay.test"
+
+          Set-Content -Path $env:GITHUB_STEP_SUMMARY -Value $summary -Encoding utf8
+          Write-Host "✅ RDP summary written."
+
+      - name: 📢 Print Credentials to Log
+        run: |
+          Write-Host "==============================="
+          Write-Host "   🚀 RDP CONNECTION DETAILS   "
+          Write-Host "==============================="
+          Write-Host "Address : $env:TAILSCALE_IP"
+          Write-Host "Username: $env:RDP_USER"
+          Write-Host "Password: $env:RDP_PASS"
+          Write-Host "==============================="
+
+      - name: 📊 Live Resource Monitor (Background)
+        run: |
+          Write-Host "📊 Starting live resource monitor..."
+          $log = Join-Path $env:RUNNER_TEMP 'rdp-monitor.log'
+          Start-Job -ScriptBlock {
+              $logPath = $using:log
+              while ($true) {
+                  $cpu = (Get-Counter '\Processor(_Total)\% Processor Time').CounterSamples.CookedValue
+                  $ram = (Get-Counter '\Memory\Available MBytes').CounterSamples.CookedValue
+                  $line = "[{0}] CPU: {1}% | RAM Available: {2} MB" -f (Get-Date -Format HH:mm:ss), [math]::Round($cpu,2), [math]::Round($ram,2)
+                  Add-Content -Path $logPath -Value $line
+                  Start-Sleep -Seconds 60
+              }
+          } | Out-Null
+          Write-Host "✅ Resource monitor started."
+
+      - name: 🧹 Cleanup on Exit
+        if: ${{ always() }}
+        run: |
+          Write-Host "🧹 Cleaning up..."
+
+          if (Get-LocalUser -Name "Vayvy" -ErrorAction SilentlyContinue) {
+              Remove-LocalUser -Name "Vayvy" -ErrorAction SilentlyContinue
+              Write-Host "Removed local user 'Vayvy'."
+          }
+
+          netsh advfirewall firewall delete rule name="RDP-Tailscale" > $null 2>&1
+
+          $tsExe = Get-Command tailscale.exe -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Source -ErrorAction SilentlyContinue
+          if (-not $tsExe) {
+              $possible = @(
+                  "$env:ProgramFiles\Tailscale\tailscale.exe",
+                  "$env:ProgramFiles(x86)\Tailscale\tailscale.exe"
+              )
+              foreach ($p in $possible) { if (Test-Path $p) { $tsExe = $p; break } }
+          }
+
+          if ($tsExe) {
+              try { & $tsExe logout; Write-Host "Tailscale logged out." }
+              catch { Write-Host "Failed to logout tailscale: $_" }
+          }
+
+          try { Stop-Service -Name TermService -Force; Write-Host "TermService stopped." }
+          catch { Write-Host "Unable to stop TermService (restricted)." }
+
+          Write-Host "✅ Cleanup completed."

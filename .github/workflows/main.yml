@@ -154,55 +154,64 @@ jobs:
 
           Write-Host "✅ MuMu Player 5.6.1 installed successfully."
 
+      - name: 🔍 Debug MuMu Path
+        shell: pwsh
+        run: |
+          Write-Host "🔍 Searching for adb.exe under C:\Program Files..."
+          Get-ChildItem "C:\Program Files" -Recurse -ErrorAction SilentlyContinue `
+            | Where-Object { $_.Name -ieq "adb.exe" } `
+            | Select-Object FullName, Length | Sort-Object Length -Descending | Format-Table
+
+          Write-Host "🔍 Searching for MuMuPlayer.exe under C:\Program Files..."
+          Get-ChildItem "C:\Program Files" -Recurse -ErrorAction SilentlyContinue `
+            | Where-Object { $_.Name -like "MuMuPlayer*.exe" } `
+            | Select-Object FullName, Length | Sort-Object Length -Descending | Format-Table
+
       - name: 📲 Install Roblox + Auto Clicker
         shell: pwsh
         run: |
-          # Cari path instalasi MuMu
-          $possible = @(
-            "C:\Program Files\Netease\MuMu\emulator\nemu\adb.exe",
-            "C:\Program Files\Netease\MuMu\adb.exe",
-            "C:\Program Files\Netease\MuMuPlayer-12.0\adb.exe",
-            "C:\Program Files\MuMu\adb.exe"
-          )
+          # Cari semua adb.exe, pilih yang terbesar
+          $adbCandidates = Get-ChildItem "C:\Program Files" -Recurse -ErrorAction SilentlyContinue `
+            | Where-Object { $_.Name -ieq "adb.exe" }
 
-          $adb = $null
-          foreach ($p in $possible) {
-            if (Test-Path $p) { $adb = $p; break }
-          }
-
-          if (-not $adb) {
-            Write-Error "❌ ADB not found, MuMu not installed or path unknown."
+          if (-not $adbCandidates) {
+            Write-Error "❌ adb.exe tidak ditemukan!"
             exit 1
           }
 
-          $emu = [System.IO.Path]::Combine((Split-Path $adb -Parent), "MuMuPlayer.exe")
-          if (-not (Test-Path $emu)) {
-            # fallback cari di folder yang sama
-            $emu = Get-ChildItem -Path (Split-Path $adb -Parent) -Filter "MuMu*.exe" -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1 | % { $_.FullName }
-          }
+          $adb = $adbCandidates | Sort-Object Length -Descending | Select-Object -First 1 -ExpandProperty FullName
 
-          if (-not (Test-Path $emu)) {
-            Write-Error "❌ Emulator executable not found!"
+          # Cari MuMuPlayer.exe, pilih yang terbesar
+          $emuCandidates = Get-ChildItem "C:\Program Files" -Recurse -ErrorAction SilentlyContinue `
+            | Where-Object { $_.Name -like "MuMuPlayer*.exe" }
+
+          if (-not $emuCandidates) {
+            Write-Error "❌ MuMuPlayer.exe tidak ditemukan!"
             exit 1
           }
 
-          Write-Host "▶️ Starting MuMu from $emu ..."
+          $emu = $emuCandidates | Sort-Object Length -Descending | Select-Object -First 1 -ExpandProperty FullName
+
+          Write-Host "✅ Found ADB at: $adb"
+          Write-Host "✅ Found Emulator at: $emu"
+
+          Write-Host "▶️ Starting MuMu..."
           Start-Process $emu
           Start-Sleep -Seconds 40   # tunggu emulator boot
 
-          # Download APK Roblox
+          # Download Roblox APK
           $robloxApk = "$env:TEMP\roblox.apk"
-          curl.exe -L -o $robloxApk "https://d.apkpure.com/b/APK/com.roblox.client?version=latest"
+          curl -L -o $robloxApk "https://d.apkpure.com/b/APK/com.roblox.client?version=latest"
 
-          # Download APK AutoClicker
+          # Download AutoClicker APK
           $autoClickerApk = "$env:TEMP\autoclicker.apk"
-          curl.exe -L -o $autoClickerApk "https://d.apkpure.com/b/APK/com.truedevelopersstudio.automatictap.autoclicker?version=latest"
+          curl -L -o $autoClickerApk "https://d.apkpure.com/b/APK/com.truedevelopersstudio.automatictap.autoclicker?version=latest"
 
           Write-Host "📲 Installing Roblox..."
-          & $adb install -r $robloxApk
+          & $adb install $robloxApk
 
           Write-Host "📲 Installing Auto Clicker..."
-          & $adb install -r $autoClickerApk
+          & $adb install $autoClickerApk
 
       - name: ✅ Done
         run: Write-Host "MuMu Player + Roblox + Auto Clicker installed!"

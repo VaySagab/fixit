@@ -140,6 +140,7 @@ jobs:
 
       - name: 📋 RDP Summary
         run: |
+          $md = ""
           $md += "## 🔑 RDP Access`n`n"
           $md += "```text`n"
           $md += "Address : $env:TAILSCALE_IP`n"
@@ -147,7 +148,7 @@ jobs:
           $md += "Password: $env:RDP_PASS`n"
           $md += "```"
           Set-Content -Path $env:GITHUB_STEP_SUMMARY -Value $md -Encoding utf8
-          Write-Host "$md"
+          Write-Host $md
 
       - name: 🕒 Keep Alive 12h + Auto Cleanup
         run: |

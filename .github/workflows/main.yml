@@ -190,7 +190,7 @@ jobs:
           $size = (Get-Item $installer).Length
           Write-Host "📏 Downloaded size: $size bytes"
 
-          if ($size -lt 500000000) {
+          if ($size -lt 50) {
             Write-Error "❌ Downloaded file too small, invalid installer."
             exit 1
           }

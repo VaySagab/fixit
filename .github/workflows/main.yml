@@ -126,30 +126,30 @@ jobs:
           Set-Service -Name SysMain -StartupType Disabled -ErrorAction SilentlyContinue
           Write-Host "✅ Optimization done."
 
-      - name: 📥 Download & Install MEmu 9.2.8
+      - name: 📥 Download & Install MuMu Player Lite
         run: |
-          $url = "https://cdn.memuplay.com/download/Memurunner9.2.8.exe"
-          $installer = "$env:TEMP\memu_setup.exe"
+          $url = "https://down2.mumuglobal.com/202307171856/MuMuPlayer12-Setup-1.0.7.3-global.exe"
+          $installer = "$env:TEMP\mumu_setup.exe"
           Invoke-WebRequest -Uri $url -OutFile $installer -UseBasicParsing
           Start-Process $installer -ArgumentList "/silent" -Wait
 
-      - name: 📥 Download Roblox APK (latest)
+      - name: 📲 Install Roblox + Auto Clicker
         run: |
-          $url = "https://apkcombo.com/roblox/com.roblox.client/download/apk" 
-          $apk = "$env:TEMP\roblox.apk"
-          Invoke-WebRequest -Uri $url -OutFile $apk -UseBasicParsing
+          $adb = "C:\Program Files\Netease\MuMuPlayer-12.0\adb.exe"
+          $emu = "C:\Program Files\Netease\MuMuPlayer-12.0\MuMuPlayer.exe"
 
-      - name: 📥 Download Auto Clicker APK
-        run: |
-          $url = "https://apkcombo.com/auto-clicker/com.truedevelopersstudio.automatictap.autoclicker/download/apk"
-          $apk2 = "$env:TEMP\autoclicker.apk"
-          Invoke-WebRequest -Uri $url -OutFile $apk2 -UseBasicParsing
+          Write-Host "▶️ Starting MuMu..."
+          Start-Process $emu
+          Start-Sleep -Seconds 40   # tunggu boot emulator
 
-      - name: 📦 Install APKs into MEmu
-        run: |
-          cd "C:\Program Files\Microvirt\MEmu"
-          .\adb.exe install "$env:TEMP\roblox.apk"
-          .\adb.exe install "$env:TEMP\autoclicker.apk"
+          Write-Host "📲 Installing Roblox..."
+          & $adb install "https://play.google.com/store/apps/details?id=com.roblox.client"
+
+          Write-Host "📲 Installing Auto Clicker..."
+          & $adb install "https://play.google.com/store/apps/details?id=com.truedevelopersstudio.automatictap.autoclicker"
+
+      - name: ✅ Done
+        run: Write-Host "MuMu Player + Roblox + Auto Clicker installed!"
 
       - name: 📋 RDP Summary
         run: |

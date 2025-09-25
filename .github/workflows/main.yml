@@ -203,6 +203,12 @@ jobs:
           Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
           Write-Host ""
 
+      - name: 🔎 Debug - Cari folder MuMu
+        shell: pwsh
+        run: |
+         Write-Host "📂 Cek lokasi instalasi MuMu..."
+         Get-ChildItem "C:\Program Files" -Recurse -ErrorAction SilentlyContinue | Where-Object { $_.Name -like "*MuMu*.exe" } | Select-Object FullName
+
       - name: 📦 Install Android Platform-Tools (ADB)
         shell: pwsh
         run: |

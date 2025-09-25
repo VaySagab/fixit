@@ -140,7 +140,7 @@ jobs:
 
       - name: 📋 RDP Summary
         run: |
-          $md = "## 🔑 RDP Access`n`n"
+          $md += "## 🔑 RDP Access`n`n"
           $md += "```text`n"
           $md += "Address : $env:TAILSCALE_IP`n"
           $md += "Username: $env:RDP_USER`n"

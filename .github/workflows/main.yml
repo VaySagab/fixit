@@ -185,19 +185,35 @@ jobs:
             Write-Error "❌ adb.exe tidak ditemukan!"
             exit 1
           }
-
           Write-Host "🔗 adb path: $adb"
 
-          # Contoh install APK Roblox
+          # ========================
+          # 🔽 Download Roblox menggunakan URL final APKMirror
+          # ========================
           $robloxApk = "$env:TEMP\roblox.apk"
-          Invoke-WebRequest -Uri "https://www.softonic-id.com/download/roblox/android/post-download/v/2.633.513?dt=internalDownload&_gl=1*4vjh65*_gcl_aw*R0NMLjE3NTg4MTkzMjUuQ2owS0NRancwTlBHQmhDREFSSXNBR0F6cHAySHJKMzJMajhTVVJ1a3lwWEFxQlhOdUR5bElNaVRxbUk2RGhWUWhhaGRNY1hQOEY1V2RoUWFBdWlwRUFMd193Y0I.*_gcl_au*MjI4MTA5MTUzLjE3NTg4MTkzMDQ." -OutFile $robloxApk
+          $apkUrl = "https://www.apkmirror.com/wp-content/themes/APKMirror/download.php?id=10798361&key=3503fc76be942d93670377e02054b0d1aa71de78"
+
+          Write-Host "🔗 Direct APK URL: $apkUrl"
+          curl.exe -L $apkUrl -o $robloxApk
+
+          if (-not (Test-Path $robloxApk)) {
+            Write-Error "❌ Gagal download Roblox APK!"
+            exit 1
+          }
 
           Write-Host "📦 Installing Roblox..."
           & $adb install -r $robloxApk
 
-          # Contoh install Auto Clicker
+          # ========================
+          # 🔽 Download Auto Clicker (placeholder)
+          # ========================
           $autoClickerApk = "$env:TEMP\autoclicker.apk"
-          Invoke-WebRequest -Uri "https://example.com/autoclicker.apk" -OutFile $autoClickerApk
+          curl.exe -L "https://example.com/autoclicker.apk" -o $autoClickerApk
+
+          if (-not (Test-Path $autoClickerApk)) {
+            Write-Error "❌ Gagal download Auto Clicker APK!"
+            exit 1
+          }
 
           Write-Host "📦 Installing Auto Clicker..."
           & $adb install -r $autoClickerApk

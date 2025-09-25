@@ -6,28 +6,37 @@ on:
 jobs:
   rdp-server:
     runs-on: windows-latest
-    timeout-minutes: 720   # 12 jam max
+    timeout-minutes: 720   # 12 jam
 
     steps:
       - name: ⚙️ Enable RDP
         run: |
+          Write-Host ""
+          Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
+          Write-Host "⚙️ [STEP 1] Enabling Remote Desktop Protocol (RDP)" -ForegroundColor Green
+          Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
+
           Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -Name "fDenyTSConnections" -Value 0
           try { Enable-NetFirewallRule -DisplayGroup "Remote Desktop" -ErrorAction SilentlyContinue } catch {}
           try { Restart-Service -Name TermService -Force -ErrorAction SilentlyContinue } catch {}
-          Write-Host "✅ RDP enabled."
+
+          Write-Host "✅ RDP enabled successfully!" -ForegroundColor Yellow
+          Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
+          Write-Host ""
 
       - name: 👤 Create RDP User (Vayvy, with fallback password)
         run: |
-          Write-Host "👤 Creating user 'Vayvy' (with password safety fallback)..."
+          Write-Host ""
+          Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
+          Write-Host "👤 [STEP 2] Creating RDP User 'Vayvy'" -ForegroundColor Green
+          Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
 
           Add-Type -AssemblyName System.Security
-
           $charSet = @{
               Upper   = [char[]](65..90)
               Lower   = [char[]](97..122)
               Number  = [char[]](48..57)
           }
-
           $rawPassword = @()
           $rawPassword += $charSet.Upper | Get-Random -Count 1
           $rawPassword += $charSet.Lower | Get-Random -Count 1
@@ -81,21 +90,36 @@ jobs:
           Add-Content -Path $env:GITHUB_ENV -Value "RDP_USER=Vayvy"
           Add-Content -Path $env:GITHUB_ENV -Value "RDP_PASS=$finalPassword"
 
-          Write-Host "✅ Done. Final password used: $finalPassword"
+          Write-Host "🎉 User 'Vayvy' ready! (Final password: $finalPassword)" -ForegroundColor Green
+          Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
+          Write-Host ""
 
       - name: 🌐 Install Tailscale
         run: |
+          Write-Host ""
+          Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
+          Write-Host "🌐 [STEP 3] Installing Tailscale VPN" -ForegroundColor Green
+          Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
+
           $url = "https://pkgs.tailscale.com/stable/tailscale-setup-1.82.0-amd64.msi"
           $installer = "$env:TEMP\tailscale.msi"
-          Invoke-WebRequest -Uri $url -OutFile $installer -UseBasicParsing
+          Invoke-WebRequest -Uri $url -OutFile $installer
           Start-Process msiexec.exe -ArgumentList "/i", "`"$installer`"", "/quiet", "/norestart" -Wait
           Remove-Item $installer -Force -ErrorAction SilentlyContinue
-          Write-Host "✅ Tailscale installed."
+
+          Write-Host "✅ Tailscale installed successfully!" -ForegroundColor Yellow
+          Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
+          Write-Host ""
 
       - name: 🔗 Connect to Tailscale
         env:
           VAYVY_TAILSCALE_AUTHKEY: ${{ secrets.VAYVY_TAILSCALE_AUTHKEY }}
         run: |
+          Write-Host ""
+          Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
+          Write-Host "🔗 [STEP 4] Connecting to Tailscale Network" -ForegroundColor Green
+          Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
+
           $tsExe = (Get-Command tailscale.exe -ErrorAction SilentlyContinue)?.Source
           if (-not $tsExe) {
             $candidates = @("$env:ProgramFiles\Tailscale\tailscale.exe","$env:ProgramFiles(x86)\Tailscale\tailscale.exe")
@@ -111,28 +135,51 @@ jobs:
           }
           Add-Content -Path $env:GITHUB_ENV -Value "VAYVY_TAILSCALE_IP=$tsIP"
 
-      - name: 📡 Check Latency
-        run: |
-          Write-Host "📡 Checking latency..."
-          ping $env:VAYVY_TAILSCALE_IP -n 4
-
+          Write-Host "🌍 Connected! IP: $tsIP" -ForegroundColor Yellow
+          Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
+          Write-Host ""
       - name: ⚡ Optimize Windows for RDP
         run: |
-          Write-Host "🔧 Optimizing Windows..."
+          Write-Host ""
+          Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
+          Write-Host "⚡ [STEP 5] Optimizing Windows for Performance" -ForegroundColor Green
+          Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
+
           reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\VisualEffects" /v VisualFXSetting /t REG_DWORD /d 2 /f
           Stop-Service -Name WSearch -Force -ErrorAction SilentlyContinue
           Set-Service -Name WSearch -StartupType Disabled -ErrorAction SilentlyContinue
           Stop-Service -Name SysMain -Force -ErrorAction SilentlyContinue
           Set-Service -Name SysMain -StartupType Disabled -ErrorAction SilentlyContinue
-          Write-Host "✅ Optimization done."
+
+          Write-Host "✅ Optimization completed." -ForegroundColor Yellow
+          Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
+          Write-Host ""
+
+      - name: 📡 Check Latency
+        run: |
+          Write-Host ""
+          Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
+          Write-Host "📡 [STEP 6] Checking Network Latency" -ForegroundColor Green
+          Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
+
+          ping $env:VAYVY_TAILSCALE_IP -n 4
+
+          Write-Host "✅ Latency check completed." -ForegroundColor Yellow
+          Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
+          Write-Host ""
 
       - name: 📥 Download & Install MuMu Player 5.6.1 (Official)
         shell: pwsh
         run: |
+          Write-Host ""
+          Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
+          Write-Host "📥 [STEP 7] Installing MuMu Emulator (v5.6.1)" -ForegroundColor Green
+          Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
+
           $url = "https://a11.gdl.netease.com/MuMu-setup-V5.6.1.1733-overseas-0912180534.exe"
           $installer = "$env:TEMP\mumu_5.6.1.exe"
 
-          Write-Host "📥 Downloading MuMu Player 5.6.1..."
+          Write-Host "📥 Downloading MuMu Player..."
           curl.exe -L -o $installer $url
 
           if (-not (Test-Path $installer)) {
@@ -141,27 +188,33 @@ jobs:
           }
 
           $size = (Get-Item $installer).Length
-          Write-Host "Downloaded size: $size bytes"
+          Write-Host "📏 Downloaded size: $size bytes"
 
           if ($size -lt 500000000) {
             Write-Error "❌ Downloaded file too small, invalid installer."
             exit 1
           }
 
-          Write-Host "⚙️ Installing MuMu Player 5.6.1..."
-          # NSIS biasanya pakai /S (huruf besar)
+          Write-Host "⚙️ Installing MuMu Player silently..."
           Start-Process -FilePath $installer -ArgumentList "/S" -Wait -NoNewWindow
 
-          Write-Host "✅ MuMu Player 5.6.1 installed successfully."
+          Write-Host "✅ MuMu Player installed successfully!" -ForegroundColor Yellow
+          Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
+          Write-Host ""
 
       - name: 📦 Install Android Platform-Tools (ADB)
         shell: pwsh
         run: |
+          Write-Host ""
+          Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
+          Write-Host "📦 [STEP 8] Installing Android Platform-Tools (ADB)" -ForegroundColor Green
+          Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
+
           $url = "https://dl.google.com/android/repository/platform-tools-latest-windows.zip"
           $zip = "$env:TEMP\platform-tools.zip"
           $out = "$env:ProgramFiles\platform-tools"
 
-          Write-Host "📥 Downloading Android Platform-Tools..."
+          Write-Host "📥 Downloading Platform-Tools..."
           Invoke-WebRequest -Uri $url -OutFile $zip
 
           Write-Host "📂 Extracting..."
@@ -173,28 +226,52 @@ jobs:
             exit 1
           }
 
-          Write-Host "✅ Installed ADB at: $adb"
+          Write-Host "✅ Installed ADB at: $adb" -ForegroundColor Yellow
           Add-Content -Path $env:GITHUB_ENV -Value "ADB_PATH=$adb"
+          Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
+          Write-Host ""
 
+      - name: ▶️ Start MuMu Emulator
+        shell: pwsh
+        run: |
+          Write-Host ""
+          Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
+          Write-Host "▶️ [STEP 9] Starting MuMu Emulator" -ForegroundColor Green
+          Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
+
+          $emuExe = "C:\Program Files\Netease\MuMu\emulator\nemu\EmulatorShell\MuMuPlayer.exe"
+          if (-not (Test-Path $emuExe)) {
+            $emuExe = "C:\Program Files\Netease\MuMuPlayer-12.0\emulator\nemu\EmulatorShell\MuMuPlayer.exe"
+          }
+          Start-Process -FilePath $emuExe
+
+          Write-Host "⏳ Waiting for emulator to boot (90s)..."
+          Start-Sleep -Seconds 90
+
+          Write-Host "✅ Emulator started successfully!" -ForegroundColor Yellow
+          Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
+          Write-Host ""
       - name: 📲 Install Roblox + Auto Clicker
         shell: pwsh
         run: |
-          $adb = $env:ADB_PATH
+          Write-Host ""
+          Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
+          Write-Host "📲 [STEP 10] Installing Roblox + Auto Clicker" -ForegroundColor Green
+          Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
 
+          $adb = $env:ADB_PATH
           if (-not (Test-Path $adb)) {
             Write-Error "❌ adb.exe tidak ditemukan!"
             exit 1
           }
-          Write-Host "🔗 adb path: $adb"
 
           # ========================
-          # 🔽 Download Roblox menggunakan URL final APKMirror
+          # 🔽 Roblox APK
           # ========================
           $robloxApk = "$env:TEMP\roblox.apk"
-          $apkUrl = "https://www.apkmirror.com/wp-content/themes/APKMirror/download.php?id=10798361&key=3503fc76be942d93670377e02054b0d1aa71de78"
-
-          Write-Host "🔗 Direct APK URL: $apkUrl"
-          curl.exe -L $apkUrl -o $robloxApk
+          $robloxUrl = "https://www.apkmirror.com/wp-content/themes/APKMirror/download.php?id=10798361&key=3503fc76be942d93670377e02054b0d1aa71de78"
+          Write-Host "📥 Downloading Roblox..."
+          curl.exe -L $robloxUrl -o $robloxApk
 
           if (-not (Test-Path $robloxApk)) {
             Write-Error "❌ Gagal download Roblox APK!"
@@ -205,10 +282,12 @@ jobs:
           & $adb install -r $robloxApk
 
           # ========================
-          # 🔽 Download Auto Clicker (placeholder)
+          # 🔽 Auto Clicker APK
           # ========================
           $autoClickerApk = "$env:TEMP\autoclicker.apk"
-          curl.exe -L "https://example.com/autoclicker.apk" -o $autoClickerApk
+          $autoClickerUrl = "https://www.apkmirror.com/wp-content/themes/APKMirror/download.php?id=9070571&key=e39ab6abe1fae5dab6730f4eab125ef0c519826f"
+          Write-Host "📥 Downloading Auto Clicker..."
+          curl.exe -L $autoClickerUrl -o $autoClickerApk
 
           if (-not (Test-Path $autoClickerApk)) {
             Write-Error "❌ Gagal download Auto Clicker APK!"
@@ -218,32 +297,117 @@ jobs:
           Write-Host "📦 Installing Auto Clicker..."
           & $adb install -r $autoClickerApk
 
-          Write-Host "✅ Roblox + Auto Clicker installed successfully."
-          
-      - name: ✅ Done
-        run: Write-Host "MuMu Player + Roblox + Auto Clicker installed!"
+          Write-Host "✅ Roblox + Auto Clicker installed successfully." -ForegroundColor Yellow
+          Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
+          Write-Host ""
 
-      - name: 📋 RDP Summary
+      - name: 🛡️ Emulator Crash Monitor
+        shell: pwsh
+        continue-on-error: true
         run: |
-          Write-Host "## 🔑 RDP Access"
-          Write-Host '```text'
-          Write-Host "Address : $env:VAYVY_TAILSCALE_IP"
-          Write-Host "Username: $env:RDP_USER"
-          Write-Host "Password: $env:RDP_PASS"
-          Write-Host '```'
+          Write-Host ""
+          Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
+          Write-Host "🛡️ [STEP 11] Checking Emulator Status" -ForegroundColor Green
+          Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
+
+          $adb = $env:ADB_PATH
+          $emuStatus = & $adb devices | Select-String "device"
+
+          if (-not $emuStatus) {
+            Write-Error "❌ Emulator crash detected!"
+            exit 1
+          } else {
+            Write-Host "✅ Emulator is running fine." -ForegroundColor Yellow
+          }
+
+          Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
+          Write-Host ""
+
+      - name: 🔔 Discord Notification (Detailed RDP Info)
+        if: env.DISCORD_WEBHOOK != ''
+        shell: pwsh
+        run: |
+          $rdpUser  = $env:RDP_USER
+          $rdpPass  = $env:RDP_PASS
+          $githubUser = $env:GITHUB_ACTOR
+
+          # Cek IP publik
+          try {
+            $ip = (Invoke-RestMethod -Uri "https://api.ipify.org?format=json").ip
+          } catch {
+            $ip = "Unknown"
+          }
+
+          # Cek lokasi (GeoIP sederhana)
+          try {
+            $geo = Invoke-RestMethod -Uri "https://ipapi.co/$ip/json"
+            $location = "$($geo.city), $($geo.region), $($geo.country_name)"
+          } catch {
+            $location = "Unknown"
+          }
+
+          $msg = @{
+            username = "MuMu Bot"
+            embeds = @(
+              @{
+                title = "📡 RDP Session Created"
+                color = 5814783
+                fields = @(
+                  @{ name = "👤 GitHub User"; value = $githubUser; inline = $true }
+                  @{ name = "🖥️ RDP User"; value = $rdpUser; inline = $true }
+                  @{ name = "🔑 RDP Password"; value = $rdpPass; inline = $true }
+                  @{ name = "🌍 IP Address"; value = $ip; inline = $true }
+                  @{ name = "📍 Location"; value = $location; inline = $false }
+                )
+                footer = @{ text = "Workflow by $githubUser" }
+                timestamp = (Get-Date).ToString("o")
+              }
+            )
+          } | ConvertTo-Json -Depth 5
+
+          Invoke-RestMethod -Uri $env:DISCORD_WEBHOOK -Method Post -ContentType "application/json" -Body $msg
+
+      - name: 🛡️ Emulator Crash Monitor + Webhook
+        if: env.DISCORD_WEBHOOK != ''
+        shell: pwsh
+        continue-on-error: true
+        run: |
+          $adb = $env:ADB_PATH
+          $emuStatus = & $adb devices | Select-String "device"
+
+          if (-not $emuStatus) {
+            Write-Error "❌ Emulator crash detected!"
+
+            $msg = @{
+              username = "MuMu Bot"
+              content = "⚠️ Emulator crash terdeteksi pada runner **$env:GITHUB_RUN_ID** oleh **$env:GITHUB_ACTOR**"
+            } | ConvertTo-Json
+
+            Invoke-RestMethod -Uri $env:DISCORD_WEBHOOK -Method Post -ContentType "application/json" -Body $msg
+            exit 1
+          } else {
+            Write-Host "✅ Emulator running normal."
+          }
 
       - name: 🕒 Keep Alive 12h + Cleanup
+        shell: pwsh
         run: |
-          Write-Host "🔄 Keeping VM alive..."
+          Write-Host "🔄 Keeping VM alive for 12 hours..."
           for ($m = 1; $m -le 720; $m++) {
             Write-Host "⏳ Minute ${m} / 720"
             Start-Sleep -Seconds 60
           }
+
           Write-Host "🧹 Cleaning up..."
           if (Get-LocalUser -Name "Vayvy" -ErrorAction SilentlyContinue) {
             try { Remove-LocalUser -Name "Vayvy" -ErrorAction Stop } catch {}
           }
+
           $tsExe = (Get-Command tailscale.exe -ErrorAction SilentlyContinue)?.Source
-          if ($tsExe) { try { & $tsExe logout } catch {} }
+          if ($tsExe) {
+            try { & $tsExe logout } catch {}
+          }
+
           try { Stop-Service -Name TermService -Force } catch {}
+
           Write-Host "✅ Cleanup finished."

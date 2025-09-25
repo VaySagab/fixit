@@ -29,30 +29,70 @@ jobs:
           Restart-Service -Name TermService -Force
           Write-Host "✅ RDP service enabled and firewall configured!"
 
-      - name: 👤 Create RDP User with 4-letter Password
+      - name: 👤 Create RDP User with Secure Password
         run: |
-          Write-Host "👤 Creating user 'Vayvy' with 4-letter password (letters only)..."
+          Write-Host "👤 Creating user 'Vayvy' with secure generated password..."
 
-          # generate 4-letter lowercase password
-          $letters = @('a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v','w','x','y','z')
-          $password = -join (1..4 | ForEach-Object { $letters | Get-Random })
+          Add-Type -AssemblyName System.Security
 
+          $charSet = @{
+              Upper   = [char[]](65..90)      # A-Z
+              Lower   = [char[]](97..122)     # a-z
+              Number  = [char[]](48..57)      # 0-9
+          }
+
+          # Start with one guaranteed char from each required class
+          $rawPassword = @()
+          $rawPassword += $charSet.Upper | Get-Random -Count 1
+          $rawPassword += $charSet.Lower | Get-Random -Count 1
+          $rawPassword += $charSet.Number | Get-Random -Count 1
+
+          # Fill the rest to reach minimum safe length (8) using combined charset
+          $allChars = $charSet.Upper + $charSet.Lower + $charSet.Number
+          $minLen = 8
+          while ($rawPassword.Count -lt $minLen) {
+              $rawPassword += $allChars | Get-Random -Count 1
+          }
+
+          # Shuffle for randomness and build final password
+          $password = -join ($rawPassword | Get-Random -Count $rawPassword.Count)
+
+          # Create secure string and user (create or update)
           $securePass = ConvertTo-SecureString $password -AsPlainText -Force
 
           if (-not (Get-LocalUser -Name "Vayvy" -ErrorAction SilentlyContinue)) {
-              New-LocalUser -Name "Vayvy" -Password $securePass -AccountNeverExpires -PasswordNeverExpires
+              try {
+                  New-LocalUser -Name "Vayvy" -Password $securePass -AccountNeverExpires -PasswordNeverExpires -ErrorAction Stop
+                  Write-Host "User 'Vayvy' created."
+              } catch {
+                  Write-Error "Failed to create user 'Vayvy': $_"
+                  exit 1
+              }
           } else {
-              try { Set-LocalUser -Name "Vayvy" -Password $securePass } catch {}
+              try {
+                  Set-LocalUser -Name "Vayvy" -Password $securePass -ErrorAction Stop
+                  Write-Host "User 'Vayvy' exists — password updated."
+              } catch {
+                  Write-Error "Failed to update password for existing user 'Vayvy': $_"
+                  exit 1
+              }
           }
 
-          Add-LocalGroupMember -Group "Administrators" -Member "Vayvy" -ErrorAction SilentlyContinue
-          Add-LocalGroupMember -Group "Remote Desktop Users" -Member "Vayvy" -ErrorAction SilentlyContinue
+          # Ensure group membership
+          try { Add-LocalGroupMember -Group "Administrators" -Member "Vayvy" -ErrorAction SilentlyContinue } catch {}
+          try { Add-LocalGroupMember -Group "Remote Desktop Users" -Member "Vayvy" -ErrorAction SilentlyContinue } catch {}
 
-          # export credentials to GitHub env
+          # Export credentials to GitHub Actions environment
           Add-Content -Path $env:GITHUB_ENV -Value "RDP_USER=Vayvy"
           Add-Content -Path $env:GITHUB_ENV -Value "RDP_PASS=$password"
 
-          Write-Host "✅ User created. (RDP_USER & RDP_PASS exported to GITHUB_ENV)"
+          # Verify
+          if (-not (Get-LocalUser -Name "Vayvy" -ErrorAction SilentlyContinue)) {
+              Write-Error "User creation failed"
+              exit 1
+          }
+
+          Write-Host "✅ User creation successful. (RDP_USER & RDP_PASS exported)"
 
       - name: 💻 Show System Info
         run: |

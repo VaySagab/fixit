@@ -99,7 +99,7 @@ jobs:
 
       - name: 🔗 Connect to Tailscale
         env:
-          TAILSCALE_AUTH_KEY: ${{ secrets.TAILSCALE_AUTH_KEY }}
+          VAYVY_TAILSCALE_AUTHKEY: ${{ secrets.VAYVY_TAILSCALE_AUTHKEY }}
         run: |
           $tsExe = (Get-Command tailscale.exe -ErrorAction SilentlyContinue)?.Source
           if (-not $tsExe) {
@@ -109,7 +109,7 @@ jobs:
             )
             foreach ($p in $candidates) { if (Test-Path $p) { $tsExe = $p; break } }
           }
-          & $tsExe up --authkey=$env:TAILSCALE_AUTH_KEY --hostname "gh-runner-${env:GITHUB_RUN_ID}" --accept-routes
+          & $tsExe up --authkey=$env:VAYVY_TAILSCALE_AUTHKEY --hostname "gh-runner-${env:GITHUB_RUN_ID}" --accept-routes
           $tsIP = $null; $retries = 0
           while (-not $tsIP -and $retries -lt 12) {
             Start-Sleep -Seconds 5
@@ -119,14 +119,14 @@ jobs:
             }
             $retries++
           }
-          Add-Content -Path $env:GITHUB_ENV -Value "TAILSCALE_IP=$tsIP"
+          Add-Content -Path $env:GITHUB_ENV -Value "VAYVY_TAILSCALE_IP=$tsIP"
 
-      - name: 📡 Check Latency to Tailscale IP
+      - name: 📡 Check Latency to Vayvy Tailscale IP
         run: |
           Write-Host "📡 Checking latency..."
-          $lat = Test-Connection -Count 4 -Quiet:$false -ComputerName $env:TAILSCALE_IP | Select-Object -First 1
-          Write-Host "✅ Ping to $env:TAILSCALE_IP successful."
-          ping $env:TAILSCALE_IP -n 4
+          $lat = Test-Connection -Count 4 -Quiet:$false -ComputerName $env:VAYVY_TAILSCALE_IP | Select-Object -First 1
+          Write-Host "✅ Ping to $env:VAYVY_TAILSCALE_IP successful."
+          ping $env:VAYVY_TAILSCALE_IP -n 4
 
       - name: ⚡ Optimize Windows for RDP
         run: |
@@ -142,7 +142,7 @@ jobs:
         run: |
           Write-Host "## 🔑 RDP Access`n"
           Write-Host '```text'
-          Write-Host "Address : $env:TAILSCALE_IP"
+          Write-Host "Address : $env:VAYVY_TAILSCALE_IP"
           Write-Host "Username: $env:RDP_USER"
           Write-Host "Password: $env:RDP_PASS"
           Write-Host '```'

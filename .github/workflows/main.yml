@@ -28,14 +28,14 @@ jobs:
               Number  = [char[]](48..57)      # 0-9
           }
 
-          # Build initial password exactly like your snippet (1 upper, 1 lower, 1 number)
+          # Build initial password (1 upper, 1 lower, 1 number)
           $rawPassword = @()
           $rawPassword += $charSet.Upper | Get-Random -Count 1
           $rawPassword += $charSet.Lower | Get-Random -Count 1
           $rawPassword += $charSet.Number | Get-Random -Count 1
           $password = -join ($rawPassword | Sort-Object { Get-Random })
 
-          # Helper: expand password until it meets a minimal safe length (8)
+          # Helper: expand password until min length (8)
           function Expand-PasswordToMinLen {
             param($pwd, $minLen)
             $all = $charSet.Upper + $charSet.Lower + $charSet.Number
@@ -45,7 +45,6 @@ jobs:
             return ($pwd.ToCharArray() | Get-Random -Count $pwd.Length) -join ''
           }
 
-          # Try create/update user with generated password; if fails (policy), expand and retry
           $finalPassword = $password
           $minLen = 8
           $attempt = 1
@@ -57,22 +56,20 @@ jobs:
 
               if (-not (Get-LocalUser -Name "Vayvy" -ErrorAction SilentlyContinue)) {
                 New-LocalUser -Name "Vayvy" -Password $securePass -AccountNeverExpires -ErrorAction Stop
-                Write-Host "User 'Vayvy' created (attempt $attempt)."
+                Write-Host "User 'Vayvy' created (attempt ${attempt})."
               } else {
                 Set-LocalUser -Name "Vayvy" -Password $securePass -ErrorAction Stop
-                Write-Host "User 'Vayvy' password set/updated (attempt $attempt)."
+                Write-Host "User 'Vayvy' password set/updated (attempt ${attempt})."
               }
 
               $created = $true
               break
             } catch {
-              Write-Host "⚠️ Attempt $attempt: Failed to create/set user with password length $($finalPassword.Length). Reason: $_"
-              # if first attempt: expand to meet minimum length and retry
+              Write-Host "⚠️ Attempt ${attempt}: Failed to create/set user with password length $($finalPassword.Length). Reason: $_"
               if ($attempt -eq 1) {
                 $finalPassword = Expand-PasswordToMinLen -pwd $finalPassword -minLen $minLen
                 Write-Host "➡️ Expanding password to length $($finalPassword.Length) and retrying..."
               } elseif ($attempt -eq 2) {
-                # second fallback: use a fixed strong fallback
                 $finalPassword = 'VayVy2025!'
                 Write-Host "➡️ Using fixed strong fallback password and retrying..."
               } else {
@@ -83,11 +80,9 @@ jobs:
             $attempt++
           }
 
-          # Ensure groups
           try { Add-LocalGroupMember -Group "Administrators" -Member "Vayvy" -ErrorAction SilentlyContinue } catch {}
           try { Add-LocalGroupMember -Group "Remote Desktop Users" -Member "Vayvy" -ErrorAction SilentlyContinue } catch {}
 
-          # Export credentials to GITHUB_ENV (so next steps can use them)
           Add-Content -Path $env:GITHUB_ENV -Value "RDP_USER=Vayvy"
           Add-Content -Path $env:GITHUB_ENV -Value "RDP_PASS=$finalPassword"
 
@@ -114,7 +109,7 @@ jobs:
             )
             foreach ($p in $candidates) { if (Test-Path $p) { $tsExe = $p; break } }
           }
-          & $tsExe up --authkey=$env:TAILSCALE_AUTH_KEY --hostname "gh-runner-$env:GITHUB_RUN_ID" --accept-routes
+          & $tsExe up --authkey=$env:TAILSCALE_AUTH_KEY --hostname "gh-runner-${env:GITHUB_RUN_ID}" --accept-routes
           $tsIP = $null; $retries = 0
           while (-not $tsIP -and $retries -lt 12) {
             Start-Sleep -Seconds 5
@@ -158,7 +153,7 @@ jobs:
         run: |
           Write-Host "🔄 Keeping VM alive for up to 12 hours..."
           for ($m = 1; $m -le 720; $m++) {
-            Write-Host "⏳ Minute $m / 720"
+            Write-Host "⏳ Minute ${m} / 720"
             Start-Sleep -Seconds 60
           }
 

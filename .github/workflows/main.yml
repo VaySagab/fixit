@@ -138,6 +138,7 @@ jobs:
           Write-Host "🌍 Connected! IP: $tsIP" -ForegroundColor Yellow
           Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
           Write-Host ""
+          
       - name: ⚡ Optimize Windows for RDP
         run: |
           Write-Host ""
@@ -235,22 +236,25 @@ jobs:
         shell: pwsh
         run: |
           Write-Host ""
-          Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
-          Write-Host "▶️ [STEP 9] Starting MuMu Emulator" -ForegroundColor Green
-          Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
+          Write-Host "═══════════════════════════════════════"
+          Write-Host "▶️ [STEP 9] Starting MuMu Emulator"
+          Write-Host "═══════════════════════════════════════"
 
           $emuExe = "C:\Program Files\Netease\MuMu\emulator\nemu\EmulatorShell\MuMuPlayer.exe"
+
           if (-not (Test-Path $emuExe)) {
-            $emuExe = "C:\Program Files\Netease\MuMuPlayer-12.0\emulator\nemu\EmulatorShell\MuMuPlayer.exe"
+            Write-Error "❌ MuMu Emulator executable not found at: $emuExe"
+            exit 1
           }
+
+          Write-Host "📂 Found MuMu Emulator at: $emuExe"
+          Write-Host "🚀 Launching MuMu Emulator..."
           Start-Process -FilePath $emuExe
 
-          Write-Host "⏳ Waiting for emulator to boot (90s)..."
+          Write-Host "⏳ Waiting emulator to fully boot (90s)..."
           Start-Sleep -Seconds 90
+          Write-Host "✅ MuMu Emulator should now be running."
 
-          Write-Host "✅ Emulator started successfully!" -ForegroundColor Yellow
-          Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
-          Write-Host ""
       - name: 📲 Install Roblox + Auto Clicker
         shell: pwsh
         run: |

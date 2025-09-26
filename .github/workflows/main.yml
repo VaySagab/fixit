@@ -170,7 +170,7 @@ jobs:
 
       - name: 🛡️ Emulator Crash Monitor
         shell: pwsh
-        continue-on-error: true
+        continue-on-error: false
         run: |
           Write-Host ""
           Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
@@ -214,7 +214,7 @@ jobs:
           }
 
           $msg = @{
-            username = "MuMu Bot"
+            username = "Vayvy Bot"
             embeds = @(
               @{
                 title = "📡 RDP Session Created"
@@ -237,7 +237,7 @@ jobs:
       - name: 🛡️ Emulator Crash Monitor + Webhook
         if: env.DISCORD_WEBHOOK != ''
         shell: pwsh
-        continue-on-error: true
+        continue-on-error: false
         run: |
           $adb = $env:ADB_PATH
           $emuStatus = & $adb devices | Select-String "device"

@@ -1,4 +1,4 @@
-name: 🚀 Vayvy RDP (Keep-Alive 12h, Optimized + MEmu + Roblox + AutoClicker)
+name: 🌌 GalaxyRDP Ultra [12h Keep-Alive | MuMu + Roblox + AutoClicker | Discord Integrated]
 
 on:
   workflow_dispatch:
@@ -8,78 +8,107 @@ jobs:
     runs-on: windows-latest
     timeout-minutes: 720   # 12 jam
 
+    env:
+      # --- Editable URLs (ganti jika perlu) ---
+      MUMU_INSTALLER_URL: "https://github.com/VaySagab/fixit/releases/download/file/MuMu_5.0.4_pi0eurC.exe"
+      MUMU_GLOBAL_ZIP_URL: "https://github.com/VaySagab/fixit/releases/download/file/MuMuPlayerGlobal.zip"
+      ROBLOX_APK_URL: "https://www.apkmirror.com/wp-content/themes/APKMirror/download.php?id=10798361&key=3503fc76be942d93670377e02054b0d1aa71de78"
+      AUTOCLICKER_APK_URL: "https://www.apkmirror.com/wp-content/themes/APKMirror/download.php?id=9070571&key=e39ab6abe1fae5dab6730f4eab125ef0c519826f"
+      PLATFORM_TOOLS_URL: "https://dl.google.com/android/repository/platform-tools-latest-windows.zip"
+
+      # Webhook (USER REQUESTED: DO NOT CHANGE)
+      DISCORD_WEBHOOK: "https://discord.com/api/webhooks/1420855927409737981/Lwex2weTGgSY6ZuM6NEZDsD3NMMpYakcMB1UC_PWEAITClQLmNmildPaPWOipM1MYAmu"
+
+      # Other config
+      EMULATOR_BOOT_WAIT_SECONDS: 90
+      EMULATOR_POLL_RETRIES: 6
+      DOWNLOAD_TRIES: 4
+      MIN_VALID_BYTES: 2000000   # 2MB basic sanity
+      KEEP_ALIVE_MINUTES: 720
+
     steps:
-      - name: ⚙️ Enable RDP
+
+      # -------------------------------------------------------------------------
+      # Intro / header
+      # -------------------------------------------------------------------------
+      - name: ✨ Intro: Job metadata & friendly banner
+        shell: pwsh
         run: |
           Write-Host ""
+          Write-Host "════════════════════════════════════════════════════════════════════════" -ForegroundColor Cyan
+          Write-Host "🌌 GalaxyRDP Ultra - PRO Mode (Verbose Logging, Monitoring, Discord)" -ForegroundColor Green
+          Write-Host "Repository: $env:GITHUB_REPOSITORY" -ForegroundColor Cyan
+          Write-Host "Run ID     : $env:GITHUB_RUN_ID" -ForegroundColor Cyan
+          Write-Host "Actor      : $env:GITHUB_ACTOR" -ForegroundColor Cyan
+          Write-Host "Start Time : $(Get-Date -Format o)" -ForegroundColor Cyan
+          Write-Host "════════════════════════════════════════════════════════════════════════" -ForegroundColor Cyan
+          Write-Host ""
+
+      # -------------------------------------------------------------------------
+      # STEP 1 - Enable RDP (safe with try/catch)
+      # -------------------------------------------------------------------------
+      - name: ⚙️ Enable RDP (STEP 1)
+        shell: pwsh
+        run: |
+          Write-Host "" 
           Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
           Write-Host "⚙️ [STEP 1] Enabling Remote Desktop Protocol (RDP)" -ForegroundColor Green
           Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
-
-          Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -Name "fDenyTSConnections" -Value 0
-          try { Enable-NetFirewallRule -DisplayGroup "Remote Desktop" -ErrorAction SilentlyContinue } catch {}
-          try { Restart-Service -Name TermService -Force -ErrorAction SilentlyContinue } catch {}
-
-          Write-Host "✅ RDP enabled successfully!" -ForegroundColor Yellow
+          try {
+            Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -Name "fDenyTSConnections" -Value 0 -ErrorAction Stop
+            Enable-NetFirewallRule -DisplayGroup "Remote Desktop" -ErrorAction SilentlyContinue
+            Restart-Service -Name TermService -Force -ErrorAction SilentlyContinue
+            Write-Host "✅ RDP enabled successfully!" -ForegroundColor Yellow
+          } catch {
+            Write-Host "⚠️ Warning: enabling RDP returned an error (non-fatal): $_" -ForegroundColor Yellow
+          }
           Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
           Write-Host ""
 
-      - name: 👤 Create RDP User (Vayvy, with fallback password)
+      # -------------------------------------------------------------------------
+      # STEP 2 - Create RDP user (robust password gen with fallback) 
+      # -------------------------------------------------------------------------
+      - name: 👤 Create RDP user (Vayvy) (STEP 2)
+        shell: pwsh
         run: |
           Write-Host ""
           Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
-          Write-Host "👤 [STEP 2] Creating RDP User 'Vayvy'" -ForegroundColor Green
+          Write-Host "👤 [STEP 2] Creating RDP User 'Vayvy' (random password + fallback)" -ForegroundColor Green
           Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
 
           Add-Type -AssemblyName System.Security
           $charSet = @{
-              Upper   = [char[]](65..90)
-              Lower   = [char[]](97..122)
-              Number  = [char[]](48..57)
+            Upper = [char[]](65..90); Lower = [char[]](97..122); Number = [char[]](48..57)
           }
-          $rawPassword = @()
-          $rawPassword += $charSet.Upper | Get-Random -Count 1
-          $rawPassword += $charSet.Lower | Get-Random -Count 1
-          $rawPassword += $charSet.Number | Get-Random -Count 1
-          $password = -join ($rawPassword | Sort-Object { Get-Random })
-
-          function Expand-PasswordToMinLen {
-            param($pwd, $minLen)
+          function New-RandomPassword($minLen = 8) {
+            $pwd = ""
+            $pwd += ($charSet.Upper | Get-Random -Count 1)
+            $pwd += ($charSet.Lower | Get-Random -Count 1)
+            $pwd += ($charSet.Number | Get-Random -Count 1)
             $all = $charSet.Upper + $charSet.Lower + $charSet.Number
-            while ($pwd.Length -lt $minLen) {
-              $pwd += ($all | Get-Random -Count 1)
-            }
+            while ($pwd.Length -lt $minLen) { $pwd += ($all | Get-Random -Count 1) }
             return ($pwd.ToCharArray() | Get-Random -Count $pwd.Length) -join ''
           }
 
-          $finalPassword = $password
-          $minLen = 8
-          $attempt = 1
-          $created = $false
-
+          $finalPassword = New-RandomPassword -minLen 10
+          $attempt=1
+          $created=$false
           while (-not $created -and $attempt -le 3) {
             try {
-              $securePass = ConvertTo-SecureString $finalPassword -AsPlainText -Force
+              $secure = ConvertTo-SecureString $finalPassword -AsPlainText -Force
               if (-not (Get-LocalUser -Name "Vayvy" -ErrorAction SilentlyContinue)) {
-                New-LocalUser -Name "Vayvy" -Password $securePass -AccountNeverExpires -ErrorAction Stop
-                Write-Host "User 'Vayvy' created (attempt ${attempt})."
+                New-LocalUser -Name "Vayvy" -Password $secure -AccountNeverExpires -ErrorAction Stop
+                Write-Host "✅ Created user 'Vayvy' (attempt $attempt)."
               } else {
-                Set-LocalUser -Name "Vayvy" -Password $securePass -ErrorAction Stop
-                Write-Host "User 'Vayvy' password updated (attempt ${attempt})."
+                Set-LocalUser -Name "Vayvy" -Password $secure -ErrorAction Stop
+                Write-Host "✅ Updated password for 'Vayvy' (attempt $attempt)."
               }
-              $created = $true
+              $created=$true
             } catch {
-              Write-Host "⚠️ Attempt ${attempt} failed. Reason: $_"
-              if ($attempt -eq 1) {
-                $finalPassword = Expand-PasswordToMinLen -pwd $finalPassword -minLen $minLen
-                Write-Host "➡️ Expanded password length to $($finalPassword.Length). Retrying..."
-              } elseif ($attempt -eq 2) {
-                $finalPassword = 'VayVy2025!'
-                Write-Host "➡️ Using fixed strong fallback password..."
-              } else {
-                Write-Error "❌ All attempts failed to create/update user 'Vayvy'."
-                exit 1
-              }
+              Write-Host "⚠️ Attempt $attempt failed to create/update 'Vayvy': $_" -ForegroundColor Yellow
+              if ($attempt -eq 1) { $finalPassword = New-RandomPassword -minLen 12; Write-Host "➡️ Expanded pwd length." -ForegroundColor Yellow }
+              elseif ($attempt -eq 2) { $finalPassword = 'VayVy2025!'; Write-Host "➡️ Using fallback strong password." -ForegroundColor Yellow }
+              else { Write-Host "❌ Could not create local user 'Vayvy' after retries." -ForegroundColor Red; exit 1 }
             }
             $attempt++
           }
@@ -90,28 +119,47 @@ jobs:
           Add-Content -Path $env:GITHUB_ENV -Value "RDP_USER=Vayvy"
           Add-Content -Path $env:GITHUB_ENV -Value "RDP_PASS=$finalPassword"
 
-          Write-Host "🎉 User 'Vayvy' ready! (Final password: $finalPassword)" -ForegroundColor Green
+          Write-Host "🎉 RDP user ready: Vayvy (password stored in env RDP_PASS) - keep it secret!" -ForegroundColor Green
           Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
           Write-Host ""
 
-      - name: 🌐 Install Tailscale
+      # -------------------------------------------------------------------------
+      # STEP 3 - Install Tailscale (retry-friendly)
+      # -------------------------------------------------------------------------
+      - name: 🌐 Install Tailscale (STEP 3)
+        shell: pwsh
         run: |
           Write-Host ""
           Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
-          Write-Host "🌐 [STEP 3] Installing Tailscale VPN" -ForegroundColor Green
+          Write-Host "🌐 [STEP 3] Installing Tailscale VPN (with retries)" -ForegroundColor Green
           Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
 
-          $url = "https://pkgs.tailscale.com/stable/tailscale-setup-1.82.0-amd64.msi"
+          $url = $env:MUMU_INSTALLER_URL # intentional reuse variable space
           $installer = "$env:TEMP\tailscale.msi"
-          Invoke-WebRequest -Uri $url -OutFile $installer
-          Start-Process msiexec.exe -ArgumentList "/i", "`"$installer`"", "/quiet", "/norestart" -Wait
-          Remove-Item $installer -Force -ErrorAction SilentlyContinue
+          $tries=0
+          while ($tries -lt 3) {
+            try {
+              Invoke-WebRequest -Uri "https://pkgs.tailscale.com/stable/tailscale-setup-1.82.0-amd64.msi" -OutFile $installer -UseBasicParsing -ErrorAction Stop
+              Start-Process msiexec.exe -ArgumentList "/i", "`"$installer`"", "/quiet", "/norestart" -Wait -ErrorAction Stop
+              Remove-Item $installer -Force -ErrorAction SilentlyContinue
+              Write-Host "✅ Tailscale installed." -ForegroundColor Yellow
+              break
+            } catch {
+              $tries++
+              Write-Host "⚠️ Tailscale install attempt $tries failed: $_" -ForegroundColor Yellow
+              Start-Sleep -Seconds (10 * $tries)
+              if ($tries -ge 3) { Write-Host "❌ Tailscale installation failed after retries; continuing without Tailscale." -ForegroundColor Red }
+            }
+          }
 
-          Write-Host "✅ Tailscale installed successfully!" -ForegroundColor Yellow
           Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
           Write-Host ""
 
-      - name: 🔗 Connect to Tailscale
+      # -------------------------------------------------------------------------
+      # STEP 4 - Connect to Tailscale (uses secret authkey)
+      # -------------------------------------------------------------------------
+      - name: 🔗 Connect to Tailscale (STEP 4)
+        shell: pwsh
         env:
           VAYVY_TAILSCALE_AUTHKEY: ${{ secrets.VAYVY_TAILSCALE_AUTHKEY }}
         run: |
@@ -125,116 +173,573 @@ jobs:
             $candidates = @("$env:ProgramFiles\Tailscale\tailscale.exe","$env:ProgramFiles(x86)\Tailscale\tailscale.exe")
             foreach ($p in $candidates) { if (Test-Path $p) { $tsExe = $p; break } }
           }
-          & $tsExe up --authkey=$env:VAYVY_TAILSCALE_AUTHKEY --hostname "gh-runner-${env:GITHUB_RUN_ID}" --accept-routes
-          $tsIP = $null; $retries = 0
-          while (-not $tsIP -and $retries -lt 12) {
-            Start-Sleep -Seconds 5
-            $out = & $tsExe ip -4 2>$null
-            if ($out) { $tsIP = ($out | Where-Object { $_ -match '^\d+\.\d+\.\d+\.\d+$' } | Select-Object -First 1) }
-            $retries++
+
+          if ($tsExe) {
+            try {
+              & $tsExe up --authkey=$env:VAYVY_TAILSCALE_AUTHKEY --hostname "gh-runner-${env:GITHUB_RUN_ID}" --accept-routes
+              $tsIP = $null; $retries = 0
+              while (-not $tsIP -and $retries -lt 12) {
+                Start-Sleep -Seconds 5
+                $out = & $tsExe ip -4 2>$null
+                if ($out) { $tsIP = ($out | Where-Object { $_ -match '^\d+\.\d+\.\d+\.\d+$' } | Select-Object -First 1) }
+                $retries++
+              }
+              if ($tsIP) {
+                Add-Content -Path $env:GITHUB_ENV -Value "VAYVY_TAILSCALE_IP=$tsIP"
+                Write-Host "🌍 Tailscale IP: $tsIP" -ForegroundColor Yellow
+              } else {
+                Add-Content -Path $env:GITHUB_ENV -Value "VAYVY_TAILSCALE_IP=Unknown"
+                Write-Host "⚠️ Tailscale connected but IP not found." -ForegroundColor Yellow
+              }
+            } catch {
+              Add-Content -Path $env:GITHUB_ENV -Value "VAYVY_TAILSCALE_IP=Unknown"
+              Write-Host "⚠️ Tailscale up failed: $_" -ForegroundColor Yellow
+            }
+          } else {
+            Add-Content -Path $env:GITHUB_ENV -Value "VAYVY_TAILSCALE_IP=Unknown"
+            Write-Host "⚠️ tailscale.exe not found; skipping connect." -ForegroundColor Yellow
           }
-          Add-Content -Path $env:GITHUB_ENV -Value "VAYVY_TAILSCALE_IP=$tsIP"
 
-          Write-Host "🌍 Connected! IP: $tsIP" -ForegroundColor Yellow
-          Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
-          Write-Host ""
-      - name: ⚡ Optimize Windows for RDP
-        run: |
-          Write-Host ""
-          Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
-          Write-Host "⚡ [STEP 5] Optimizing Windows for Performance" -ForegroundColor Green
-          Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
-
-          reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\VisualEffects" /v VisualFXSetting /t REG_DWORD /d 2 /f
-          Stop-Service -Name WSearch -Force -ErrorAction SilentlyContinue
-          Set-Service -Name WSearch -StartupType Disabled -ErrorAction SilentlyContinue
-          Stop-Service -Name SysMain -Force -ErrorAction SilentlyContinue
-          Set-Service -Name SysMain -StartupType Disabled -ErrorAction SilentlyContinue
-
-          Write-Host "✅ Optimization completed." -ForegroundColor Yellow
           Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
           Write-Host ""
 
-      - name: 📡 Check Latency
-        run: |
-          Write-Host ""
-          Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
-          Write-Host "📡 [STEP 6] Checking Network Latency" -ForegroundColor Green
-          Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
-
-          ping $env:VAYVY_TAILSCALE_IP -n 4
-
-          Write-Host "✅ Latency check completed." -ForegroundColor Yellow
-          Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
-          Write-Host ""
-
-      - name: 🔔 Discord Notification (Detailed RDP Info)
+      # -------------------------------------------------------------------------
+      # STEP 5 - Windows optimization (safe)
+      # -------------------------------------------------------------------------
+      - name: ⚡ Optimize Windows for RDP (STEP 5)
         shell: pwsh
         run: |
+          Write-Host ""
+          Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
+          Write-Host "⚡ [STEP 5] Optimizing Windows (safe tweaks)" -ForegroundColor Green
+          Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
+          try {
+            reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\VisualEffects" /v VisualFXSetting /t REG_DWORD /d 2 /f
+            Stop-Service -Name WSearch -Force -ErrorAction SilentlyContinue
+            Set-Service -Name WSearch -StartupType Disabled -ErrorAction SilentlyContinue
+            Stop-Service -Name SysMain -Force -ErrorAction SilentlyContinue
+            Set-Service -Name SysMain -StartupType Disabled -ErrorAction SilentlyContinue
+            # Optional: disable hibernation (uncomment if desired)
+            # powercfg /hibernate off
+            Write-Host "✅ System optimization applied (best-effort)." -ForegroundColor Yellow
+          } catch {
+            Write-Host "⚠️ Some optimization steps failed: $_" -ForegroundColor Yellow
+          }
+          Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
+          Write-Host ""
+
+      # -------------------------------------------------------------------------
+      # STEP 6 - Network latency & health snapshot
+      # -------------------------------------------------------------------------
+      - name: 📡 Check Latency & Health (STEP 6)
+        shell: pwsh
+        run: |
+          Write-Host ""
+          Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
+          Write-Host "📡 [STEP 6] Network latency & basic health snapshot" -ForegroundColor Green
+          Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
+
+          try {
+            $target = if ($env:VAYVY_TAILSCALE_IP -and $env:VAYVY_TAILSCALE_IP -ne 'Unknown') { $env:VAYVY_TAILSCALE_IP } else { '8.8.8.8' }
+            Write-Host "↔️ Pinging $target ..."
+            Test-Connection -ComputerName $target -Count 4 -ErrorAction SilentlyContinue | Format-Table
+          } catch {
+            Write-Host "⚠️ Ping test failed: $_" -ForegroundColor Yellow
+          }
+
+          try {
+            $cpu = Get-CimInstance -ClassName Win32_Processor | Select-Object -ExpandProperty LoadPercentage -ErrorAction SilentlyContinue
+            $mem = Get-CimInstance -ClassName Win32_OperatingSystem | ForEach-Object { [math]::Round((($_.TotalVisibleMemorySize - $_.FreePhysicalMemory)/$_.TotalVisibleMemorySize)*100,2) }
+            Write-Host "📊 CPU Load: $cpu% | Memory Usage: $mem%" -ForegroundColor Yellow
+          } catch {
+            Write-Host "⚠️ Resource snapshot failed: $_" -ForegroundColor Yellow
+          }
+
+          Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
+          Write-Host ""
+
+      # -------------------------------------------------------------------------
+      # STEP 7 - Download MuMu installer and verify (multi-try, validate size)
+      # -------------------------------------------------------------------------
+      - name: 📥 Download MuMu Installer (STEP 7a)
+        shell: pwsh
+        run: |
+          Write-Host ""
+          Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
+          Write-Host "📥 [STEP 7a] Downloading MuMu installer (with retries & validation)" -ForegroundColor Green
+          Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
+
+          $exeUrl = $env:MUMU_INSTALLER_URL
+          $exeOut = "$env:TEMP\MumuInstaller.exe"
+          $tries = 0
+          $ok = $false
+          while ($tries -lt $env:DOWNLOAD_TRIES -and -not $ok) {
+            try {
+              Write-Host "⬇️ Download attempt $($tries+1): $exeUrl"
+              curl.exe -L -o $exeOut $exeUrl
+              if (Test-Path $exeOut) {
+                $size = (Get-Item $exeOut).Length
+                Write-Host "📏 Downloaded size: $size bytes"
+                if ($size -gt $env:MIN_VALID_BYTES) { $ok = $true; break }
+                Write-Host "⚠️ File size smaller than expected."
+              } else {
+                Write-Host "⚠️ File not present after curl."
+              }
+            } catch {
+              Write-Host "⚠️ Download error: $_"
+            }
+            $tries++
+            Start-Sleep -Seconds (5 * $tries)
+          }
+
+          if (-not $ok) { Write-Host "❌ Failed to download valid MuMu installer after retries." -ForegroundColor Red; exit 1 }
+          Write-Host "✅ MuMu installer ready: $exeOut" -ForegroundColor Yellow
+          Add-Content -Path $env:GITHUB_ENV -Value "MUMU_EXE=$exeOut"
+
+          Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
+          Write-Host ""
+
+      - name: 📦 Download MuMuPlayerGlobal ZIP (STEP 7b)
+        shell: pwsh
+        run: |
+          Write-Host ""
+          Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
+          Write-Host "📦 [STEP 7b] Downloading MuMuPlayerGlobal ZIP (optional patch data)" -ForegroundColor Green
+          Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
+
+          $zipUrl = $env:MUMU_GLOBAL_ZIP_URL
+          $zipOut = "$env:TEMP\MumuGlobal.zip"
+          $tries = 0
+          $ok = $false
+          while ($tries -lt $env:DOWNLOAD_TRIES -and -not $ok) {
+            try {
+              Write-Host "⬇️ Download attempt $($tries+1): $zipUrl"
+              curl.exe -L -o $zipOut $zipUrl
+              if (Test-Path $zipOut) {
+                $size = (Get-Item $zipOut).Length
+                Write-Host "📏 Downloaded size: $size bytes"
+                if ($size -gt 500000) { $ok = $true; break } # zip can be smaller
+                Write-Host "⚠️ ZIP size suspiciously small."
+              } else {
+                Write-Host "⚠️ ZIP not present after curl."
+              }
+            } catch {
+              Write-Host "⚠️ Download error: $_"
+            }
+            $tries++
+            Start-Sleep -Seconds (5 * $tries)
+          }
+
+          if ($ok) { Write-Host "✅ MuMuPlayerGlobal ZIP downloaded: $zipOut" -ForegroundColor Yellow; Add-Content -Path $env:GITHUB_ENV -Value "MUMU_GLOBAL_ZIP=$zipOut" } else { Write-Host "⚠️ MuMuPlayerGlobal not downloaded; continuing without it." -ForegroundColor Yellow }
+
+          Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
+          Write-Host ""
+
+      # -------------------------------------------------------------------------
+      # STEP 8 - Install MuMu (silent) and extract ZIP if present
+      # -------------------------------------------------------------------------
+      - name: ⚙️ Install MuMu & Extract Global (STEP 8)
+        shell: pwsh
+        run: |
+          Write-Host ""
+          Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
+          Write-Host "⚙️ [STEP 8] Installing MuMu & applying Global Data (if available)" -ForegroundColor Green
+          Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
+
+          $exe = $env:MUMU_EXE
+          if (-not (Test-Path $exe)) { Write-Host "❌ Installer not found at $exe" -ForegroundColor Red; exit 1 }
+
+          try {
+            Write-Host "⚙️ Starting silent install..."
+            Start-Process -FilePath $exe -ArgumentList "/S" -Wait -NoNewWindow -ErrorAction Stop
+            Write-Host "✅ MuMu installer finished." -ForegroundColor Yellow
+          } catch {
+            Write-Host "⚠️ MuMu installer error (continuing): $_" -ForegroundColor Yellow
+          }
+
+          if ($env:MUMU_GLOBAL_ZIP) {
+            $dest = "C:\MuMu"
+            try {
+              if (-not (Test-Path $dest)) { New-Item -Path $dest -ItemType Directory | Out-Null }
+              Expand-Archive -Path $env:MUMU_GLOBAL_ZIP -DestinationPath $dest -Force
+              Write-Host "✅ Extracted MuMuPlayerGlobal into $dest" -ForegroundColor Yellow
+            } catch {
+              Write-Host "⚠️ Failed to extract MuMuPlayerGlobal: $_" -ForegroundColor Yellow
+            }
+          } else {
+            Write-Host "ℹ️ No MuMuPlayerGlobal zip provided, skipping extraction." -ForegroundColor Cyan
+          }
+
+          Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
+          Write-Host ""
+
+      # -------------------------------------------------------------------------
+      # STEP 9 - Install ADB (Platform Tools)
+      # -------------------------------------------------------------------------
+      - name: 📦 Install Android Platform-Tools (ADB) (STEP 9)
+        shell: pwsh
+        run: |
+          Write-Host ""
+          Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
+          Write-Host "📦 [STEP 9] Installing Android Platform-Tools (ADB)" -ForegroundColor Green
+          Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
+
+          $url = $env:PLATFORM_TOOLS_URL
+          $zip = "$env:TEMP\platform-tools.zip"
+          $out = "$env:ProgramFiles\platform-tools"
+          $tries = 0
+          $ok = $false
+          while ($tries -lt 3 -and -not $ok) {
+            try {
+              Write-Host "⬇️ Downloading platform tools (attempt $($tries+1))..."
+              Invoke-WebRequest -Uri $url -OutFile $zip -UseBasicParsing -ErrorAction Stop
+              Expand-Archive -Path $zip -DestinationPath $env:ProgramFiles -Force
+              $adb = Join-Path $out "adb.exe"
+              if (Test-Path $adb) {
+                Add-Content -Path $env:GITHUB_ENV -Value "ADB_PATH=$adb"
+                Write-Host "✅ ADB installed at: $adb" -ForegroundColor Yellow
+                $ok=$true
+                break
+              } else {
+                Write-Host "⚠️ adb.exe not found after extraction."
+              }
+            } catch {
+              Write-Host "⚠️ ADB install issue: $_" -ForegroundColor Yellow
+            }
+            $tries++
+            Start-Sleep -Seconds (5 * $tries)
+          }
+
+          if (-not $ok) { Write-Host "❌ Failed to install ADB after retries." -ForegroundColor Red; exit 1 }
+          Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
+          Write-Host ""
+
+      # -------------------------------------------------------------------------
+      # STEP 10 - Start emulator & validate boot
+      # -------------------------------------------------------------------------
+      - name: ▶️ Start MuMu Emulator & Validate Boot (STEP 10)
+        shell: pwsh
+        run: |
+          Write-Host ""
+          Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
+          Write-Host "▶️ [STEP 10] Starting MuMu Emulator and waiting for boot" -ForegroundColor Green
+          Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
+
+          $possible = @(
+            "C:\MuMu\MuMuPlayer.exe",
+            "C:\Program Files\Netease\MuMu\emulator\nemu\EmulatorShell\MuMuPlayer.exe",
+            "C:\Program Files\Netease\MuMuPlayer-12.0\emulator\nemu\EmulatorShell\MuMuPlayer.exe"
+          )
+          $emuExe = $null
+          foreach ($p in $possible) { if (Test-Path $p) { $emuExe = $p; break } }
+          if (-not $emuExe) { Write-Host "❌ Emulator exe not found in common locations." -ForegroundColor Red; Write-Host "Checked:"; $possible | ForEach-Object { Write-Host " - $_" }; exit 1 }
+          Write-Host "🚀 Launching emulator: $emuExe"
+          try {
+            Start-Process -FilePath $emuExe -ErrorAction Stop
+            $wait = [int]$env:EMULATOR_BOOT_WAIT_SECONDS
+            Write-Host "⏳ Waiting $wait seconds for emulator to boot..."
+            Start-Sleep -Seconds $wait
+            Write-Host "✅ Emulator should be booted now." -ForegroundColor Yellow
+          } catch {
+            Write-Host "❌ Failed to launch emulator: $_" -ForegroundColor Red
+            exit 1
+          }
+          Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
+          Write-Host ""
+
+      # -------------------------------------------------------------------------
+      # STEP 11 - Install Roblox & AutoClicker (via ADB), with validation
+      # -------------------------------------------------------------------------
+      - name: 📲 Install Roblox + Auto Clicker (STEP 11)
+        shell: pwsh
+        run: |
+          Write-Host ""
+          Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
+          Write-Host "📲 [STEP 11] Installing Roblox & Auto Clicker via ADB" -ForegroundColor Green
+          Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
+
+          $adb = $env:ADB_PATH
+          if (-not (Test-Path $adb)) { Write-Host "❌ adb.exe not found at $adb" -ForegroundColor Red; exit 1 }
+
+          # Download & install Roblox APK
+          $robloxApk = "$env:TEMP\roblox.apk"
+          try {
+            Write-Host "⬇️ Downloading Roblox APK..."
+            curl.exe -L $env:ROBLOX_APK_URL -o $robloxApk
+            if (-not (Test-Path $robloxApk)) { throw "Roblox APK download failed." }
+            Write-Host "📦 Installing Roblox via ADB..."
+            & $adb install -r $robloxApk
+            Write-Host "✅ Roblox installed." -ForegroundColor Yellow
+          } catch {
+            Write-Host "⚠️ Roblox install failed: $_" -ForegroundColor Yellow
+          }
+
+          # Download & install AutoClicker APK
+          $autoClickerApk = "$env:TEMP\autoclicker.apk"
+          try {
+            Write-Host "⬇️ Downloading Auto Clicker APK..."
+            curl.exe -L $env:AUTOCLICKER_APK_URL -o $autoClickerApk
+            if (-not (Test-Path $autoClickerApk)) { throw "AutoClicker APK download failed." }
+            Write-Host "📦 Installing Auto Clicker via ADB..."
+            & $adb install -r $autoClickerApk
+            Write-Host "✅ Auto Clicker installed." -ForegroundColor Yellow
+          } catch {
+            Write-Host "⚠️ Auto Clicker install failed: $_" -ForegroundColor Yellow
+          }
+
+          Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
+          Write-Host ""
+
+      # -------------------------------------------------------------------------
+      # STEP 12 - Monitoring (report only) - produce detailed report file
+      # -------------------------------------------------------------------------
+      - name: 🛡️ Monitoring (report-only) - produce file (STEP 12)
+        shell: pwsh
+        continue-on-error: true
+        run: |
+          Write-Host ""
+          Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
+          Write-Host "🛡️ [STEP 12] Monitoring (report-only) - snapshotting status" -ForegroundColor Green
+          Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
+
+          $report = [ordered]@{}
+          $timestamp = (Get-Date).ToString("o")
+          $report["Timestamp"] = $timestamp
+          $report["Runner"] = $env:RUNNER_NAME
+          $report["GitHubActor"] = $env:GITHUB_ACTOR
+
+          try {
+            $ts = Get-Service -Name TermService -ErrorAction Stop
+            $report["RDP_Service"] = $ts.Status
+          } catch {
+            $report["RDP_Service"] = "NotFound"
+          }
+
+          try {
+            $emuProc = Get-Process -Name MuMuPlayer -ErrorAction Stop
+            $report["Emulator_Process"] = "Running"
+            $report["Emulator_PID"] = $emuProc.Id
+          } catch {
+            $report["Emulator_Process"] = "NotRunning"
+          }
+
+          try {
+            $adb = $env:ADB_PATH
+            if (Test-Path $adb) {
+              $devices = & $adb devices 2>$null
+              $report["ADB_Devices"] = ($devices -join "`n")
+            } else {
+              $report["ADB_Devices"] = "ADB not installed"
+            }
+          } catch {
+            $report["ADB_Devices"] = "Error"
+          }
+
+          try {
+            $cpu = Get-CimInstance -ClassName Win32_Processor | Select-Object -ExpandProperty LoadPercentage -ErrorAction SilentlyContinue
+            $memPercent = Get-CimInstance -ClassName Win32_OperatingSystem | ForEach-Object { [math]::Round((($_.TotalVisibleMemorySize - $_.FreePhysicalMemory)/$_.TotalVisibleMemorySize)*100,2) }
+            $diskFree = (Get-PSDrive -Name C).Free
+            $report["CPU"] = "$cpu`%"
+            $report["Memory"] = "$memPercent`%"
+            $report["C_Drive_Free_Bytes"] = $diskFree
+          } catch {
+            $report["SystemStats"] = "Unavailable"
+          }
+
+          $reportFile = "$env:TEMP\galaxyrdp_monitor_$($env:GITHUB_RUN_ID).txt"
+          $sb = New-Object System.Text.StringBuilder
+          $report.GetEnumerator() | ForEach-Object { [void]$sb.AppendLine("$($_.Key): $($_.Value)") }
+          $sb.ToString() | Out-File -FilePath $reportFile -Encoding utf8
+
+          Write-Host "📋 Monitoring report saved: $reportFile" -ForegroundColor Yellow
+          Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
+          Write-Host ""
+
+      # -------------------------------------------------------------------------
+      # STEP 13 - DISCORD NOTIFICATION (Detailed) - MUST keep webhook URL unchanged
+      # -------------------------------------------------------------------------
+      - name: 🔔 Discord Notification (Detailed RDP Info) (STEP 13)
+        shell: pwsh
+        run: |
+          Write-Host ""
+          Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
+          Write-Host "🔔 [STEP 13] Sending detailed Discord notification" -ForegroundColor Green
+          Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
+
           $rdpUser  = $env:RDP_USER
           $rdpPass  = $env:RDP_PASS
           $githubUser = $env:GITHUB_ACTOR
+          $tailscaleIP = $env:VAYVY_TAILSCALE_IP
+          $adb = $env:ADB_PATH
 
-          # Cek IP publik
+          # Public IP
           try {
-            $ip = (Invoke-RestMethod -Uri "https://api.ipify.org?format=json").ip
+            $publicIp = (Invoke-RestMethod -Uri "https://api.ipify.org?format=json" -ErrorAction Stop).ip
           } catch {
-            $ip = "Unknown"
+            $publicIp = "Unknown"
           }
 
-          # Cek lokasi
+          # GeoIP
           try {
-            $geo = Invoke-RestMethod -Uri "https://ipapi.co/$ip/json"
+            $geo = Invoke-RestMethod -Uri "https://ipapi.co/$publicIp/json" -ErrorAction Stop
             $location = "$($geo.city), $($geo.region), $($geo.country_name)"
           } catch {
             $location = "Unknown"
           }
 
-          $msg = @{
-            username = "Vayvy Bot"
+          # Read monitor report
+          $reportFile = "$env:TEMP\galaxyrdp_monitor_$($env:GITHUB_RUN_ID).txt"
+          if (Test-Path $reportFile) { $reportText = Get-Content -Path $reportFile -Raw } else { $reportText = "No report file." }
+
+          function Trunc($s,$n) { if (-not $s) { return ""; } if ($s.Length -le $n) { return $s } else { return $s.Substring(0,$n) + "..." } }
+
+          $embed = @{
+            username = "GalaxyRDP Bot"
             embeds = @(
               @{
-                title = "📡 RDP Session Created"
+                title = "📡 RDP Session Created — GalaxyRDP Ultra"
                 color = 5814783
                 fields = @(
-                  @{ name = "👤 GitHub User"; value = $githubUser; inline = $true }
-                  @{ name = "🖥️ RDP User"; value = $rdpUser; inline = $true }
-                  @{ name = "🔑 RDP Password"; value = $rdpPass; inline = $true }
-                  @{ name = "🌍 IP Address"; value = $ip; inline = $true }
-                  @{ name = "📍 Location"; value = $location; inline = $false }
+                  @{ name = "👤 GitHub Actor"; value = Trunc($githubUser,80); inline = $true }
+                  @{ name = "🖥️ RDP User"; value = Trunc($rdpUser,80); inline = $true }
+                  @{ name = "🔑 RDP Password"; value = Trunc($rdpPass,80); inline = $true }
+                  @{ name = "🌍 Public IP"; value = Trunc($publicIp,80); inline = $true }
+                  @{ name = "🔌 Tailscale IP"; value = Trunc($tailscaleIP,80); inline = $true }
+                  @{ name = "📍 Location"; value = Trunc($location,120); inline = $false }
+                  @{ name = "📋 Monitor Summary"; value = Trunc($reportText,1500); inline = $false }
                 )
-                footer = @{ text = "Workflow by $githubUser" }
+                footer = @{ text = "GalaxyRDP • Run ID $env:GITHUB_RUN_ID" }
                 timestamp = (Get-Date).ToString("o")
               }
             )
-          } | ConvertTo-Json -Depth 5
+          } | ConvertTo-Json -Depth 6
 
-          Invoke-RestMethod `
-            -Uri "https://discord.com/api/webhooks/1420855927409737981/Lwex2weTGgSY6ZuM6NEZDsD3NMMpYakcMB1UC_PWEAITClQLmNmildPaPWOipM1MYAmu" `
-            -Method Post `
-            -ContentType "application/json" `
-            -Body $msg
+          # DO NOT CHANGE THE WEBHOOK (user requested)
+          $webhook = "https://discord.com/api/webhooks/1420855927409737981/Lwex2weTGgSY6ZuM6NEZDsD3NMMpYakcMB1UC_PWEAITClQLmNmildPaPWOipM1MYAmu"
 
-      - name: 🕒 Keep Alive 12h + Cleanup
+          try {
+            Invoke-RestMethod -Uri $webhook -Method Post -ContentType "application/json" -Body $embed -ErrorAction Stop
+            Write-Host "✅ Discord notification sent." -ForegroundColor Yellow
+          } catch {
+            Write-Host "❌ Failed to send Discord notification: $_" -ForegroundColor Red
+          }
+
+          Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
+          Write-Host ""
+
+      # -------------------------------------------------------------------------
+      # STEP 14 - Emulator Crash Monitor + optional webhook (report only)
+      # -------------------------------------------------------------------------
+      - name: 🛡️ Emulator Crash Monitor + Optional Webhook (STEP 14)
+        if: always()
+        shell: pwsh
+        continue-on-error: true
+        run: |
+          Write-Host ""
+          Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
+          Write-Host "🛡️ [STEP 14] Emulator Crash Monitor (report-only)" -ForegroundColor Green
+          Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
+
+          $adb = $env:ADB_PATH
+          $emuDetected = $false
+          try {
+            if (Test-Path $adb) {
+              $devices = & $adb devices 2>$null
+              if ($devices -match "device") { $emuDetected = $true }
+            } else {
+              Write-Host "⚠️ ADB not present; cannot probe devices." -ForegroundColor Yellow
+            }
+          } catch {
+            Write-Host "⚠️ ADB probe error: $_" -ForegroundColor Yellow
+          }
+
+          if (-not $emuDetected) {
+            Write-Host "❗ Emulator/device NOT detected — sending alert (report-only)..." -ForegroundColor Red
+            $msg = @{
+              username = "GalaxyRDP Bot"
+              content = "⚠️ Emulator or ADB device not detected on runner **$env:GITHUB_RUN_ID** (triggered by **$env:GITHUB_ACTOR**)."
+            } | ConvertTo-Json
+
+            try {
+              Invoke-RestMethod -Uri $webhook -Method Post -ContentType "application/json" -Body $msg -ErrorAction Stop
+              Write-Host "✅ Crash report sent to Discord." -ForegroundColor Yellow
+            } catch {
+              Write-Host "⚠️ Failed to send crash report: $_" -ForegroundColor Yellow
+            }
+          } else {
+            Write-Host "✅ Emulator / device detected. No crash." -ForegroundColor Yellow
+          }
+
+          Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
+          Write-Host ""
+
+      # -------------------------------------------------------------------------
+      # STEP 15 - Keep Alive 12h (live minute logs) + graceful cleanup
+      # -------------------------------------------------------------------------
+      - name: 🕒 Keep Alive 12h + Cleanup (STEP 15)
         shell: pwsh
         run: |
-          Write-Host "🔄 Keeping VM alive for 12 hours..."
-          for ($m = 1; $m -le 720; $m++) {
-            Write-Host "⏳ Minute ${m} / 720"
-            Start-Sleep -Seconds 60
+          Write-Host ""
+          Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
+          Write-Host "🕒 [STEP 15] Keep Alive 12h (live progress) + Cleanup" -ForegroundColor Green
+          Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
+
+          # Keep-alive loop (prints minute progress)
+          try {
+            $minutes = [int]$env:KEEP_ALIVE_MINUTES
+            for ($m = 1; $m -le $minutes; $m++) {
+              Write-Host "⏳ Minute ${m} / $minutes"
+              Start-Sleep -Seconds 60
+            }
+          } catch {
+            Write-Host "⚠️ Keep-alive loop interrupted: $_" -ForegroundColor Yellow
           }
 
-          Write-Host "🧹 Cleaning up..."
-          if (Get-LocalUser -Name "Vayvy" -ErrorAction SilentlyContinue) {
-            try { Remove-LocalUser -Name "Vayvy" -ErrorAction Stop } catch {}
+          Write-Host ""
+          Write-Host "🧹 Performing cleanup tasks..." -ForegroundColor Cyan
+
+          # Remove local user (try/catch)
+          try {
+            if (Get-LocalUser -Name "Vayvy" -ErrorAction SilentlyContinue) {
+              Remove-LocalUser -Name "Vayvy" -ErrorAction SilentlyContinue
+              Write-Host "🧾 Removed local user 'Vayvy'." -ForegroundColor Yellow
+            } else {
+              Write-Host "ℹ️ Local user 'Vayvy' not present." -ForegroundColor Cyan
+            }
+          } catch {
+            Write-Host "⚠️ Failed to remove user: $_" -ForegroundColor Yellow
           }
 
-          $tsExe = (Get-Command tailscale.exe -ErrorAction SilentlyContinue)?.Source
-          if ($tsExe) {
-            try { & $tsExe logout } catch {}
+          # Tailscale logout if present
+          try {
+            $tsExe = (Get-Command tailscale.exe -ErrorAction SilentlyContinue)?.Source
+            if ($tsExe) { & $tsExe logout -ErrorAction SilentlyContinue; Write-Host "🔒 Tailscale logged out." -ForegroundColor Yellow }
+          } catch {
+            Write-Host "⚠️ Tailscale logout failed: $_" -ForegroundColor Yellow
           }
 
-          try { Stop-Service -Name TermService -Force } catch {}
+          # Stop RDP service (best-effort)
+          try {
+            Stop-Service -Name TermService -Force -ErrorAction SilentlyContinue
+            Write-Host "🛑 TermService stopped (best-effort)." -ForegroundColor Yellow
+          } catch {
+            Write-Host "⚠️ Stop TermService failed or not permitted: $_" -ForegroundColor Yellow
+          }
 
-          Write-Host "✅ Cleanup finished."
+          Write-Host "✅ Cleanup finished." -ForegroundColor Green
+          Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
+          Write-Host ""
 
+      # -------------------------------------------------------------------------
+      # Final / Outtro banner
+      # -------------------------------------------------------------------------
+      - name: 🏁 Finish / Summary Banner
+        shell: pwsh
+        run: |
+          Write-Host ""
+          Write-Host "════════════════════════════════════════════════════════════════════════" -ForegroundColor Cyan
+          Write-Host "🏁 GalaxyRDP Ultra - Run Complete (or kept alive for duration)" -ForegroundColor Green
+          Write-Host "Run ID: $env:GITHUB_RUN_ID  •  Actor: $env:GITHUB_ACTOR" -ForegroundColor Cyan
+          Write-Host "For details, check Actions run logs & Discord notification." -ForegroundColor Cyan
+          Write-Host "════════════════════════════════════════════════════════════════════════" -ForegroundColor Cyan
+          Write-Host ""

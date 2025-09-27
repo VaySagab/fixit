@@ -42,7 +42,7 @@ env:
 jobs:
   secure-rdp:
     runs-on: windows-latest
-    timeout-minutes: ${{ env.KEEP_ALIVE_MINUTES }} # Use environment variable for timeout
+    timeout-minutes: 720 # Use environment variable for timeout
 
     steps:
       - name: 🌟🚀 Vayvy's RDP Boot-up Sequence Initiated 🚀🌟

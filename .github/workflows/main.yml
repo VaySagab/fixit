@@ -124,6 +124,11 @@ jobs:
           # Optimize RDP settings
           Set-ItemProperty -Path 'HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services' -Name "fEnforceClientDesktopComposition" -Value 0 -Force
           Set-ItemProperty -Path 'HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services' -Name "fAllowUnsafeRemoteConnections" -Value 1 -Force
+
+          # Safe power plan switch (Balanced always exists)
+          $balanced = (powercfg -list | Select-String "High Performance").ToString().Split()[3]
+          powercfg -setactive $balanced
+          
           
           # RDP tweaks
           Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -Name "MaxLossyCompression" -Value 2 -Force

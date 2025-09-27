@@ -295,13 +295,7 @@ jobs:
               exit 1 # Consider if this should be a critical error or just skip MuMu
           }
           
-          Write-Host "Starting MuMu Player installation. This may take a while..."
-          # Use /S for silent installation if supported, or adapt to the installer's silent options
-          Start-Process $installerPath -ArgumentList "/S", "/Passive" -Wait -NoNewWindow -ErrorAction Stop
-          Remove-Item $installerPath -Force -ErrorAction SilentlyContinue # Clean up installer
-          
           Write-Host "✅ MuMu Player 5 Installation Attempted. Please verify upon RDP login."
-          Write-Host "Note: MuMu Player might require additional configuration or updates on first run."
 
       - name: 📢 Discord Webhook Notification - RDP Ready!
         run: |

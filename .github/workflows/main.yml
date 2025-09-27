@@ -409,9 +409,16 @@ jobs:
               $cpu = (Get-Counter '\Processor(_Total)\% Processor Time').CounterSamples.Where({ $_.InstanceName -eq '_total' }).CookedValue
               $memory = Get-WmiObject -Class Win32_OperatingSystem
               $totalMemoryMB = [math]::Round($memory.TotalPhysicalMemory / 1024)
-              $freeMemoryMB = [math]::Round($memory.FreePhysicalMemory / 1024)
-              $usedMemoryMB = $totalMemoryMB - $freeMemoryMB
-              $ramUsagePercent = [math]::Round(($usedMemoryMB / $totalMemoryMB) * 100, 2)
+              $totalMemoryMB = [math]::Round($memory.TotalVisibleMemorySize / 1024)
+              $freeMemoryMB  = [math]::Round($memory.FreePhysicalMemory / 1024)
+              $usedMemoryMB  = $totalMemoryMB - $freeMemoryMB
+
+              if ($totalMemoryMB -eq 0) {
+                  $ramUsagePercent = 0
+              } else {
+                  $ramUsagePercent = [math]::Round(($usedMemoryMB / $totalMemoryMB) * 100, 2)
+              }
+
               
               [PSCustomObject]@{
                   CPU = [math]::Round($cpu, 2)
@@ -500,7 +507,7 @@ jobs:
                       color = 16711680
                       fields = @(
                           @{ name = "Workflow ID"; value = "`${{ github.run_id }}`"; inline = $true },
-                          @{ name = "Error Details"; value = "```$errorMessage```" }
+                          @{ name = "Error Details"; value = ("```" + $errorMessage + "```") }
                       )
                       footer = @{
                           text = 'Vayvy RDP Error - Check GitHub Actions logs'

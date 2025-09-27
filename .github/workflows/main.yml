@@ -383,7 +383,7 @@ jobs:
                   embeds     = @(
                       @{
                           title       = "🎉✨ Vayvy's Premium RDP is Ready! ✨🎉"
-                          description = "💫 Your personalized RDP environment is **LIVE** on runner **$runnerHostname** 🚀\n\nEnjoy smooth performance and secure access, crafted by Vayvy 💎"
+                          description = "💫 Your personalized RDP environment is **LIVE** on runner **$runnerHostname** 🚀 Enjoy smooth performance and secure access, crafted by Vayvy 💎"
                           color       = 16761035 # Pinkish gradient style (eye-catching)
                           fields      = $fields
                           thumbnail   = @{ url = "https://i.imgur.com/your_thumbnail.png" } # Tambah gambar kecil
@@ -415,10 +415,10 @@ jobs:
           $processName = "MuMuPlayer.exe"         # nama proses emulator
 
           $monitoringIntervalSeconds = 1200       # interval update (20 menit)
-          $alertCooldownSeconds      = 300       # jeda antar alert (20 menit)
+          $alertCooldownSeconds      = 300        # jeda antar alert (5 menit)
           $crashThresholdCPU         = 90         # threshold CPU alert (%)
           $crashThresholdRAM         = 90         # threshold RAM alert (%)
-          $keepAliveIntervalSeconds  = 1200       # 20 menit
+          $keepAliveIntervalSeconds  = 1200       # keep-alive tiap 20 menit
 
           $lastCpuAlert = (Get-Date).AddSeconds(-$alertCooldownSeconds)
           $lastRamAlert = (Get-Date).AddSeconds(-$alertCooldownSeconds)
@@ -516,6 +516,8 @@ jobs:
                       "CPU Usage" = "$($metrics.CPU)%"
                       "RAM Usage" = "$($metrics.RAMUsagePercent)% ($($metrics.UsedRAM)MB / $($metrics.TotalRAM)MB)"
                       "Free RAM"  = "$($metrics.FreeRAM)MB"
+                      "Public IP" = "${{ env.PUBLIC_IP }}"
+                      "Tailscale IP" = "${{ env.TAILSCALE_IP }}"
                   } -color 3447003
 
               # 🎮 Emulator Monitoring
@@ -536,38 +538,11 @@ jobs:
                       } -color 3066993
               }
 
-              # 🔄 Keep Alive setiap 20 menit
+              # 🔄 Keep Alive
               if (($currentTime - $lastKeepAlive).TotalSeconds -ge $keepAliveIntervalSeconds) {
                   Send-DiscordKeepAlive
                   $lastKeepAlive = $currentTime
               }
-
-              Start-Sleep -Seconds $monitoringIntervalSeconds
-          }
-              # 🚨 RAM Alert
-              if ($ramUsage -ge $crashThresholdRAM -and ($currentTime - $lastRamAlert).TotalSeconds -ge $alertCooldownSeconds) {
-                  Send-DiscordMonitoringNotification -title "🚨 WARNING: High RAM Usage!" `
-                      -description "Your Vayvy RDP is consuming a lot of RAM, potentially leading to instability." `
-                      -color 16729344 `
-                      -Metrics @{
-                          "Current RAM Usage" = "$($ramUsage)% ($($metrics.UsedRAM)MB / $($metrics.TotalRAM)MB)"
-                          "Threshold" = "$($crashThresholdRAM)%"
-                          "Recommended Action" = "Close unnecessary applications or reduce memory-intensive tasks."
-                      }
-                  $lastRamAlert = $currentTime
-              }
-
-              # 📊 Status Update (Periodic)
-              Send-DiscordMonitoringNotification -title "📊 RDP System Status Update" `
-                  -description "Here is the current performance snapshot of your RDP." `
-                  -color 3447003 `
-                  -Metrics @{
-                      "CPU Usage" = "$($metrics.CPU)%"
-                      "RAM Usage" = "$($metrics.RAMUsagePercent)% ($($metrics.UsedRAM)MB / $($metrics.TotalRAM)MB)"
-                      "Free RAM"  = "$($metrics.FreeRAM)MB"
-                      "Public IP" = "${{ env.PUBLIC_IP }}"
-                      "Tailscale IP" = "${{ env.TAILSCALE_IP }}"
-                  }
 
               Start-Sleep -Seconds $monitoringIntervalSeconds
           }

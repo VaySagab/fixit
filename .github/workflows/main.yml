@@ -81,36 +81,20 @@ jobs:
           $rdpUser = "${{ env.RDP_USER_INPUT }}"
           $rdpPass = "${{ env.RDP_PASS_INPUT }}"
 
-          # Validate password complexity (optional, but good practice)
-          if ($rdpPass.Length -lt 12 -or `
-              ($rdpPass -notmatch '\p{Lu}') -or `
-              ($rdpPass -notmatch '\p{Ll}') -or `
-              ($rdpPass -notmatch '\p{N}') -or `
-              ($rdpPass -notmatch '\p{S}')) {
-              Write-Warning "⚠️ Provided password might not meet complexity requirements (min 12 chars, incl. uppercase, lowercase, number, special). Attempting to use it anyway."
-          }
-
           $securePass = ConvertTo-SecureString $rdpPass -AsPlainText -Force
-          
-          # Check if user already exists
+
           if (Get-LocalUser -Name $rdpUser -ErrorAction SilentlyContinue) {
-              Write-Host "User '$rdpUser' already exists. Updating password and group memberships."
+              Write-Host "User '$rdpUser' exists. Updating password."
               Set-LocalUser -Name $rdpUser -Password $securePass -AccountNeverExpires
           } else {
               New-LocalUser -Name $rdpUser -Password $securePass -AccountNeverExpires
           }
-          
+
           Add-LocalGroupMember -Group "Administrators" -Member $rdpUser
           Add-LocalGroupMember -Group "Remote Desktop Users" -Member $rdpUser
-          
+
           echo "RDP_USERNAME=$rdpUser" >> $env:GITHUB_ENV
-          echo "RDP_PASSWORD=$rdpPass" >> $env:GITHUB_ENV # Store for Discord webhook, handle securely
-          
-          if (-not (Get-LocalUser -Name $rdpUser)) {
-              Write-Error "User creation failed for '$rdpUser'."
-              exit 1
-          }
-          Write-Host "✅ RDP User '$rdpUser' Created/Updated Successfully."
+          echo "RDP_PASSWORD=$rdpPass" >> $env:GITHUB_ENV
 
       - name: 🚀 Optimize RDP for Maximum Performance (Vayvy's Touch)
         if: env.RDP_MAX_PERFORMANCE == 'True'
@@ -493,7 +477,7 @@ jobs:
                           }
                       )
                       footer = @{
-                          text = "Vayvy RDP Error - Check GitHub Actions logs"
+                          text = 'Vayvy RDP Error - Check GitHub Actions logs'
                           icon_url = "https://i.imgur.com/your_vayvy_logo.png"
                       }
                       timestamp = "$(Get-Date -Format 'yyyy-MM-ddTHH:mm:ssZ')"

@@ -120,6 +120,112 @@ jobs:
 
           Write-Host "✅ RDP Performance Optimizations Applied."
 
+      - name: 🧹 Vayvy's RDP Cleanup & Optimization
+        run: |
+          # ============================================================
+          # Nama Skrip : VayvyRDP_CleanUp.ps1
+          # Deskripsi  : Skrip otomatis untuk membersihkan aplikasi Windows bawaan
+          #              dan menghentikan proses latar belakang tidak perlu
+          #              agar kinerja RDP lebih ringan & optimal.
+          # ============================================================
+
+          Write-Host ""
+          Write-Host "🌟🚀 Memulai Vayvy's RDP Cleanup & Optimization Script 🚀🌟"
+          Write-Host "============================================================"
+
+          # ------------------------------------------------------------
+          # Bagian 1: Hapus Aplikasi Bawaan (UWP Apps)
+          # ------------------------------------------------------------
+          Write-Host ""
+          Write-Host "➡️ Memulai penghapusan aplikasi Windows yang tidak perlu..."
+          Write-Host "------------------------------------------------------------"
+
+          $appsToRemove = @(
+              "Microsoft.ZuneVideo",
+              "Microsoft.Windows.Photos",
+              "Microsoft.BingWeather",
+              "Microsoft.3DBuilder",
+              "Microsoft.OneConnect",
+              "Microsoft.WindowsMaps",
+              "Microsoft.GetHelp",
+              "Microsoft.Getstarted",
+              "Microsoft.WindowsFeedbackHub",
+              "Microsoft.SkypeApp",
+              "Microsoft.XboxApp",
+              "Microsoft.XboxGameOverlay",
+              "Microsoft.XboxGamingOverlay",
+              "Microsoft.XboxIdentityProvider",
+              "Microsoft.XboxSpeechToTextOverlay",
+              "Microsoft.YourPhone",
+              "Microsoft.Advertising.Xaml"
+          )
+
+          foreach ($app in $appsToRemove) {
+              Write-Host ""
+              Write-Host "🗑️ Mencoba menghapus: $app..."
+              try {
+                  Get-AppxPackage -Name $app -AllUsers -ErrorAction SilentlyContinue | Remove-AppxPackage -ErrorAction SilentlyContinue
+                  Get-AppxProvisionedPackage -Online | Where-Object DisplayName -eq $app | Remove-AppxProvisionedPackage -Online -ErrorAction SilentlyContinue
+                  Write-Host "✅ Berhasil (atau sudah tidak ada) $app."
+              }
+              catch {
+                  Write-Warning "⚠️ Tidak bisa menghapus $app (mungkin tidak ada atau sudah dihapus)."
+              }
+          }
+
+          Write-Host ""
+          Write-Host "✅ Selesai menghapus aplikasi yang tidak diperlukan."
+          Write-Host "============================================================"
+
+          # ------------------------------------------------------------
+          # Bagian 2: Hentikan Proses Latar Belakang yang Tidak Perlu
+          # ------------------------------------------------------------
+          Write-Host ""
+          Write-Host "➡️ Memulai penghentian proses latar belakang..."
+          Write-Host "------------------------------------------------------------"
+
+          $processesToStop = @(
+              "OneCloud.exe",
+              "OneDrive.exe",
+              "Skype.exe",
+              "Teams.exe",
+              "RuntimeBroker.exe",
+              "ApplicationFrameHost.exe",
+              "SearchIndexer.exe"
+          )
+
+          foreach ($process in $processesToStop) {
+              Write-Host ""
+              Write-Host "⏹️ Mencoba menghentikan proses: $process..."
+
+              $runningProcesses = Get-Process -Name $process -ErrorAction SilentlyContinue
+
+              if ($runningProcesses) {
+                  try {
+                      Stop-Process -Name $process -Force -ErrorAction SilentlyContinue
+                      Write-Host "✅ Berhasil menghentikan proses $process."
+                  }
+                  catch {
+                      Write-Warning "⚠️ Tidak bisa menghentikan $process (mungkin sudah berhenti)."
+                  }
+              }
+              else {
+                  Write-Host "ℹ️ Proses $process tidak ditemukan. Melewati..."
+              }
+          }
+
+          Write-Host ""
+          Write-Host "✅ Selesai menghentikan proses yang tidak diperlukan."
+          Write-Host "============================================================"
+
+          # ------------------------------------------------------------
+          # Selesai
+          # ------------------------------------------------------------
+          Write-Host ""
+          Write-Host "🎉 Cleanup & Optimization Complete!"
+          Write-Host "✨ RDP kamu sekarang lebih ringan, efisien, dan cepat! ✨"
+          Write-Host "============================================================"
+
       - name: 🌐 Install Tailscale VPN
         run: |
           Write-Host "➡️ Step: Installing Tailscale VPN Client..."

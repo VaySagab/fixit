@@ -58,11 +58,11 @@ jobs:
           Write-Host "➡️ Step: Configuring Remote Desktop Services..."
           # Enable Remote Desktop and disable Network Level Authentication (if needed)
           Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' `
-                             -Name "fDenyTSConnections" -Value 0 -Force
+                           -Name "fDenyTSConnections" -Value 0 -Force
           Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' `
-                             -Name "UserAuthentication" -Value 0 -Force
+                           -Name "UserAuthentication" -Value 0 -Force
           Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' `
-                             -Name "SecurityLayer" -Value 0 -Force
+                           -Name "SecurityLayer" -Value 0 -Force
 
           # Remove any existing rule with the same name to avoid duplication
           netsh advfirewall firewall delete rule name="RDP-Tailscale"
@@ -339,49 +339,36 @@ jobs:
 
       - name: 📊 Start RDP Monitoring and Keep Alive
         run: |
-          Write-Host ""
-          Write-Host "****************************************************************"
-          Write-Host "***               RDP READY FOR CONNECTION!                ***"
-          Write-Host "****************************************************************"
-          Write-Host "***        Your Vayvy RDP is now fully operational!        ***"
-          Write-Host "***                                                        ***"
-          Write-Host "***   Tailscale IP:   $env:TAILSCALE_IP"
-          Write-Host "***   Username:       $env:RDP_USERNAME"
-          Write-Host "***   Password:       $env:RDP_PASSWORD"
-          Write-Host "***                                                        ***"
-          Write-Host "***   Session Duration: $env:KEEP_ALIVE_MINUTES minutes    ***"
-          Write-Host "***   Cancel workflow on GitHub to terminate               ***"
-          Write-Host "****************************************************************"
-          Write-Host "***         System monitoring active on Discord            ***"
-          Write-Host "****************************************************************"
-          Write-Host ""
-          
           $discordWebhook = "${{ env.DISCORD_WEBHOOK }}"
           $runnerHostname = "$env:COMPUTERNAME"
-          $monitoringIntervalSeconds = 3600 # Every 1 hour
-          $crashThresholdCPU = 90 # % CPU
-          $crashThresholdRAM = 90 # % RAM usage
-          $lastCpuAlert = [DateTime]::MinValue
-          $lastRamAlert = [DateTime]::MinValue
-          $alertCooldownSeconds = 300 # 5 minutes cooldown for crash alerts
+
+          $monitoringIntervalSeconds = 300        # interval update ke Discord (5 menit)
+          $alertCooldownSeconds      = 600        # jeda antar alert (10 menit)
+          $crashThresholdCPU         = 90         # threshold CPU alert (%)
+          $crashThresholdRAM         = 90         # threshold RAM alert (%)
+
+          $lastCpuAlert = (Get-Date).AddSeconds(-$alertCooldownSeconds)
+          $lastRamAlert = (Get-Date).AddSeconds(-$alertCooldownSeconds)
 
           function Send-DiscordMonitoringNotification {
               param (
                   [string]$title,
                   [string]$description,
                   [int]$color,
-                  [hashtable]$fields = @{},
-                  [string]$footerText = "Vayvy RDP Monitoring"
+                  [hashtable]$Metrics
               )
-              
+
               $embedFields = @()
-              foreach ($key in $fields.Keys) {
-                  $embedFields += @{ name = $key; value = $fields[$key]; inline = $true }
+              foreach ($key in $Metrics.Keys) {
+                  $embedFields += @{
+                      name  = $key
+                      value = $Metrics[$key]
+                      inline = $true
+                  }
               }
 
               $jsonBody = @{
-                  username = "Vayvy's RDP Monitor 📊"
-                  avatar_url = "https://i.imgur.com/your_monitor_avatar.png" # Replace with cool monitor bot avatar
+                  username = "Vayvy's RDP Bot 🤖"
                   embeds = @(
                       @{
                           title = $title
@@ -389,8 +376,7 @@ jobs:
                           color = $color
                           fields = $embedFields
                           footer = @{
-                              text = "$footerText | Runner: $runnerHostname | Workflow: ${{ github.run_id }}"
-                              icon_url = "https://i.imgur.com/your_vayvy_logo.png"
+                              text = "Vayvy RDP Monitoring | Runner: $runnerHostname | Workflow: ${{ github.run_id }}"
                           }
                           timestamp = "$(Get-Date -Format 'yyyy-MM-ddTHH:mm:ssZ')"
                       }
@@ -398,17 +384,16 @@ jobs:
               } | ConvertTo-Json -Depth 4
 
               try {
-                  Invoke-RestMethod -Uri $discordWebhook -Method Post -ContentType "application/json" -Body $jsonBody -TimeoutSec 30
-                  Write-Host "[$(Get-Date)] Discord monitoring notification sent: $title"
+                  Invoke-RestMethod -Uri $discordWebhook -Method Post -ContentType "application/json" -Body $jsonBody
+                  Write-Host "[$(Get-Date)] ✅ Sent monitoring info to Discord."
               } catch {
-                  Write-Warning "[$(Get-Date)] ⚠️ Failed to send Discord monitoring notification: $($_.Exception.Message)"
+                  Write-Warning "[$(Get-Date)] ⚠️ Failed to send to Discord: $($_.Exception.Message)"
               }
           }
 
           function Get-SystemMetrics {
-              $cpu = (Get-Counter '\Processor(_Total)\% Processor Time').CounterSamples.Where({ $_.InstanceName -eq '_total' }).CookedValue
+              $cpu = (Get-Counter '\Processor(_Total)\% Processor Time').CounterSamples.CookedValue
               $memory = Get-WmiObject -Class Win32_OperatingSystem
-              $totalMemoryMB = [math]::Round($memory.TotalPhysicalMemory / 1024)
               $totalMemoryMB = [math]::Round($memory.TotalVisibleMemorySize / 1024)
               $freeMemoryMB  = [math]::Round($memory.FreePhysicalMemory / 1024)
               $usedMemoryMB  = $totalMemoryMB - $freeMemoryMB
@@ -419,7 +404,6 @@ jobs:
                   $ramUsagePercent = [math]::Round(($usedMemoryMB / $totalMemoryMB) * 100, 2)
               }
 
-              
               [PSCustomObject]@{
                   CPU = [math]::Round($cpu, 2)
                   TotalRAM = $totalMemoryMB
@@ -429,63 +413,54 @@ jobs:
               }
           }
 
-          $monitoringStartTime = Get-Date
-          $lastHourlyCheck = Get-Date
-
           while ($true) {
-              $currentMetrics = Get-SystemMetrics
-              $cpuLoad = $currentMetrics.CPU
-              $ramUsage = $currentMetrics.RAMUsagePercent
               $currentTime = Get-Date
+              $metrics = Get-SystemMetrics
+              $cpuUsage = $metrics.CPU
+              $ramUsage = $metrics.RAMUsagePercent
 
-              Write-Host "[$(Get-Date)] System Status - CPU: $($cpuLoad)% | RAM: $($ramUsage)% ($($currentMetrics.UsedRAM)MB / $($currentMetrics.TotalRAM)MB)"
-
-              # Hourly Monitoring
-              if (($currentTime - $lastHourlyCheck).TotalSeconds -ge $monitoringIntervalSeconds) {
-                  Send-DiscordMonitoringNotification -title "📊 Hourly RDP System Report" `
-                      -description "Just a quick check-in on your Vayvy RDP!" `
-                      -color 3447003 ` # Blue
-                      -fields @{
-                          "CPU Usage" = "$($cpuLoad)%";
-                          "RAM Usage" = "$($ramUsage)% ($($currentMetrics.UsedRAM)MB / $($currentMetrics.TotalRAM)MB)";
-                          "Time Active" = "$((New-TimeSpan -Start $monitoringStartTime -End $currentTime).ToString('hh\:mm\:ss'))";
-                          "Public IP" = "${{ env.PUBLIC_IP }}";
-                          "Tailscale IP" = "${{ env.TAILSCALE_IP }}"
-                      }
-                  $lastHourlyCheck = $currentTime
-              }
-
-              # Crash Prevention Monitoring (High CPU/RAM)
-              if ($cpuLoad -ge $crashThresholdCPU -and ($currentTime - $lastCpuAlert).TotalSeconds -ge $alertCooldownSeconds) {
+              # 🚨 CPU Alert
+              if ($cpuUsage -ge $crashThresholdCPU -and ($currentTime - $lastCpuAlert).TotalSeconds -ge $alertCooldownSeconds) {
                   Send-DiscordMonitoringNotification -title "🚨 WARNING: High CPU Usage!" `
-                      -description "Your Vayvy RDP is experiencing high CPU load, potentially nearing a crash." `
-                      -color 16763904 ` # Orange
-                      -fields @{
-                          "Current CPU" = "$($cpuLoad)%";
-                          "Threshold" = "$($crashThresholdCPU)%";
-                          "Recommended Action" = "Check running applications on your RDP."
+                      -description "Your Vayvy RDP is using too much CPU, which may cause lag or crashes." `
+                      -color 16711680 `
+                      -Metrics @{
+                          "Current CPU Usage" = "$($cpuUsage)%"
+                          "Threshold" = "$($crashThresholdCPU)%"
+                          "Recommended Action" = "Reduce CPU-heavy processes or close unused apps."
                       }
                   $lastCpuAlert = $currentTime
               }
 
+              # 🚨 RAM Alert
               if ($ramUsage -ge $crashThresholdRAM -and ($currentTime - $lastRamAlert).TotalSeconds -ge $alertCooldownSeconds) {
                   Send-DiscordMonitoringNotification -title "🚨 WARNING: High RAM Usage!" `
                       -description "Your Vayvy RDP is consuming a lot of RAM, potentially leading to instability." `
-                      -color 16729344 ` # Red
-                      -fields @{
-                          "Current RAM Usage" = "$($ramUsage)% ($($currentMetrics.UsedRAM)MB / $($currentMetrics.TotalRAM)MB)";
-                          "Threshold" = "$($crashThresholdRAM)%";
+                      -color 16729344 `
+                      -Metrics @{
+                          "Current RAM Usage" = "$($ramUsage)% ($($metrics.UsedRAM)MB / $($metrics.TotalRAM)MB)"
+                          "Threshold" = "$($crashThresholdRAM)%"
                           "Recommended Action" = "Close unnecessary applications or reduce memory-intensive tasks."
                       }
                   $lastRamAlert = $currentTime
               }
 
-              Start-Sleep -Seconds 60 # Check every minute for alerts, hourly for full report
+              # 📊 Status Update (Periodic)
+              Send-DiscordMonitoringNotification -title "📊 RDP System Status Update" `
+                  -description "Here is the current performance snapshot of your RDP." `
+                  -color 3447003 `
+                  -Metrics @{
+                      "CPU Usage" = "$($metrics.CPU)%"
+                      "RAM Usage" = "$($metrics.RAMUsagePercent)% ($($metrics.UsedRAM)MB / $($metrics.TotalRAM)MB)"
+                      "Free RAM"  = "$($metrics.FreeRAM)MB"
+                      "Public IP" = "${{ env.PUBLIC_IP }}"
+                      "Tailscale IP" = "${{ env.TAILSCALE_IP }}"
+                  }
+
+              Start-Sleep -Seconds $monitoringIntervalSeconds
           }
         env:
-          # Pass Discord webhook to this step, ensuring it's available for the script
           DISCORD_WEBHOOK: ${{ env.DISCORD_WEBHOOK }}
-        # This step handles errors locally if Send-DiscordMonitoringNotification fails, but allows the main loop to continue.
 
       - name: ❌ Discord Webhook Notification - Workflow Failed
         if: ${{ failure() && env.DISCORD_NOTIFY_ON_FINISH == 'True' }}
@@ -506,11 +481,19 @@ jobs:
                       description = "Uh oh! Something went wrong while setting up your Vayvy RDP. Please review the logs to diagnose the issue."
                       color = 16711680
                       fields = @(
-                          @{ name = "Workflow ID"; value = "`${{ github.run_id }}`"; inline = $true },
-                          @{ name = "Error Details"; value = ("```" + $errorMessage + "```") }
+                          @{
+                              name  = "Workflow ID"
+                              value = "${{ github.run_id }}"
+                              inline = $true
+                          },
+                          @{
+                              name  = "Error Details"
+                              value = ("```" + $errorMessage + "```")
+                              inline = $false
+                          }
                       )
                       footer = @{
-                          text = 'Vayvy RDP Error - Check GitHub Actions logs'
+                          text = "Vayvy RDP Error - Check GitHub Actions logs"
                           icon_url = "https://i.imgur.com/your_vayvy_logo.png"
                       }
                       timestamp = "$(Get-Date -Format 'yyyy-MM-ddTHH:mm:ssZ')"
@@ -524,4 +507,3 @@ jobs:
           } catch {
               Write-Warning "⚠️ Failed to send Discord error notification: $($_.Exception.Message)"
           }
-

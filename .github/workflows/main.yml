@@ -309,7 +309,7 @@ jobs:
           Write-Host "🌌✨=================================================✨🌌"
           Write-Host ""
 
-          $bgUrl = "https://ibb.co.com/bjPyfp8x" 
+          $bgUrl = "https://i.ibb.co.com/MysjXq3b/image.png" 
           $bgPath = "$env:TEMP\Vayvy_RDP_Background.jpg"
 
           Invoke-WebRequest -Uri $bgUrl -OutFile $bgPath -UseBasicParsing

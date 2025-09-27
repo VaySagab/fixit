@@ -123,20 +123,14 @@ jobs:
 
           # Set RDP connection settings for low bandwidth (graphics quality)
           Set-ItemProperty -Path 'HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services' -Name "fEnforceClientDesktopComposition" -Value 0 -Force
-          Set-ItemProperty -Path 'HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services' -Name "fAllowUnsafeRemoteConnections" -Value 1 -Force # Less secure, but for performance
+          Set-ItemProperty -Path 'HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services' -Name "fAllowUnsafeRemoteConnections" -Value 1 -Force
           
-          # Disable unnecessary services (use with caution, for max performance on a dedicated RDP)
-          # Stop-Service -Name "SysMain" -ErrorAction SilentlyContinue # Superfetch
-          # Stop-Service -Name "DiagTrack" -ErrorAction SilentlyContinue # Connected User Experiences and Telemetry
-          # Set-Service -Name "SysMain" -StartupType Disabled -ErrorAction SilentlyContinue
-          # Set-Service -Name "DiagTrack" -StartupType Disabled -ErrorAction SilentlyContinue
-
           # Set power plan to High Performance
-          powercfg /setactive 8c5e7fd1-ce92-4676-a201-0ed67ee1c238 # High Performance GUID
+          powercfg.exe /setactive 8c5e7fd1-ce92-4676-a201-0ed67ee1c238
           
           # Registry tweaks for better RDP display
-          Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -Name "MaxLossyCompression" -Value 2 -Force # Maximize compression
-          Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -Name "MaxBMPCacheSize" -Value 65536 -Force # Larger cache
+          Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -Name "MaxLossyCompression" -Value 2 -Force
+          Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -Name "MaxBMPCacheSize" -Value 65536 -Force
           
           Write-Host "✅ RDP Performance Optimizations Applied."
 
@@ -507,10 +501,10 @@ jobs:
                   @{
                       title = "❌ Vayvy's RDP Setup Failed!"
                       description = "Uh oh! Something went wrong while setting up your Vayvy RDP. Please review the logs to diagnose the issue."
-                      color = 16711680 # Red color
+                      color = 16711680
                       fields = @(
-                          @{ name = "Workflow ID"; value = "`\`\`${{ github.run_id}}\`\``"; inline = $true },
-                          @{ name = "Error Details"; value = "`\`\`\`$errorMessage\`\`\`\`" }
+                          @{ name = "Workflow ID"; value = "`${{ github.run_id }}`"; inline = $true },
+                          @{ name = "Error Details"; value = "```$errorMessage```" }
                       )
                       footer = @{
                           text = "Vayvy RDP Error | Check GitHub Actions logs"
@@ -527,3 +521,4 @@ jobs:
           } catch {
               Write-Warning "⚠️ Failed to send Discord error notification: $($_.Exception.Message)"
           }
+

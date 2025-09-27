@@ -116,22 +116,23 @@ jobs:
         if: env.RDP_MAX_PERFORMANCE == 'True'
         run: |
           Write-Host "➡️ Step: Applying Performance Optimizations for a Smooth RDP Experience..."
-          
+
           # Disable visual effects for performance
-          Set-ItemProperty -Path "HKCU:\Control Panel\Desktop" -Name "UserPreferencesMask" -Value ([byte[]](0x90, 0x12, 0x01, 0x80, 0x10, 0x00, 0x00, 0x00)) -Force
+          Set-ItemProperty -Path "HKCU:\Control Panel\Desktop" -Name "UserPreferencesMask" -Value ([byte[]](0x90,0x12,0x01,0x80,0x10,0x00,0x00,0x00)) -Force
           Set-ItemProperty -Path "HKCU:\Control Panel\Desktop\WindowMetrics" -Name "MinAnimate" -Value "0" -Force
 
-          # Set RDP connection settings for low bandwidth (graphics quality)
+          # Optimize RDP settings
           Set-ItemProperty -Path 'HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services' -Name "fEnforceClientDesktopComposition" -Value 0 -Force
           Set-ItemProperty -Path 'HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services' -Name "fAllowUnsafeRemoteConnections" -Value 1 -Force
           
-          # Set power plan to High Performance
-          powercfg.exe /setactive 8c5e7fd1-ce92-4676-a201-0ed67ee1c238
+          # Force High Performance plan (auto-detect GUID)
+          $highPerf = (powercfg -list | Select-String "High performance").ToString().Split()[3]
+          powercfg -setactive $highPerf
           
-          # Registry tweaks for better RDP display
+          # RDP tweaks
           Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -Name "MaxLossyCompression" -Value 2 -Force
           Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -Name "MaxBMPCacheSize" -Value 65536 -Force
-          
+
           Write-Host "✅ RDP Performance Optimizations Applied."
 
       - name: 🌐 Install Tailscale VPN
@@ -507,7 +508,7 @@ jobs:
                           @{ name = "Error Details"; value = "```$errorMessage```" }
                       )
                       footer = @{
-                          text = "Vayvy RDP Error | Check GitHub Actions logs"
+                          text = "Vayvy RDP Error - Check GitHub Actions logs"
                           icon_url = "https://i.imgur.com/your_vayvy_logo.png"
                       }
                       timestamp = "$(Get-Date -Format 'yyyy-MM-ddTHH:mm:ssZ')"

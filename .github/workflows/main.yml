@@ -283,42 +283,50 @@ jobs:
 
       - name: 📢 Discord Webhook Notification - RDP Ready!
         run: |
-          if ("${{ env.DISCORD_NOTIFY_ON_FINISH }}" -eq "True") {
-            Write-Host "➡️ Step: Sending Discord RDP Ready Notification..."
-            $jsonBody = @{
-                username = "Vayvy's RDP Bot 🤖"
-                avatar_url = "https://i.imgur.com/your_bot_avatar.png" # Replace with a cool Vayvy bot avatar
-                embeds = @(
-                    @{
-                        title = "🎉 Vayvy's RDP Is Live! Connect Now! 🎉"
-                        description = "Your personalized RDP environment is ready for action! Get ready to explore."
-                        color = 65280 # Green color
-                        fields = @(
-                            @{ name = "👑 RDP Username"; value = "`\`\`${{ env.RDP_USERNAME}}\`\``"; inline = $true },
-                            @{ name = "🔑 RDP Password"; value = "`\`\`${{ env.RDP_PASSWORD}}\`\``"; inline = $true },
-                            @{ name = "🌐 Tailscale IP"; value = "`\`\`${{ env.TAILSCALE_IP}}\`\``"; inline = $true },
-                            @{ name = "🌍 Public IP"; value = "`\`\`${{ env.PUBLIC_IP}}\`\``"; inline = $true },
-                            @{ name = "📍 RDP Location"; value = "`\`\`${{ env.RDP_LOCATION}}\`\``"; inline = $true },
-                            @{ name = "🔗 Tailscale Connect Guide"; value = "1. Install [Tailscale](https://tailscale.com/download).\n2. Login with the same account as your auth key.\n3. Ping `${{ env.TAILSCALE_IP}}` to confirm connection.\n4. Connect with an RDP client to `${{ env.TAILSCALE_IP}}` using the provided credentials." }
-                        )
-                        footer = @{
-                            text = "RDP Made by Vayvy | Workflow ID: ${{ github.run_id }}"
-                            icon_url = "https://i.imgur.com/your_vayvy_logo.png" # Replace with a cool Vayvy logo
-                        }
-                        timestamp = "$(Get-Date -Format 'yyyy-MM-ddTHH:mm:ssZ')"
-                    }
-                )
-            } | ConvertTo-Json -Depth 4
+          $discordWebhook = "${{ env.DISCORD_WEBHOOK }}"
+          $runnerHostname = "$env:COMPUTERNAME"
 
-            try {
-                Invoke-RestMethod -Uri "${{ env.DISCORD_WEBHOOK }}" -Method Post -ContentType "application/json" -Body $jsonBody
-                Write-Host "✅ RDP Ready notification sent to Discord."
-            } catch {
-                Write-Warning "⚠️ Failed to send Discord RDP Ready notification: $($_.Exception.Message)"
-                echo "Failed to send RDP Ready Discord notification." | Out-File -FilePath discord_error.txt
-            }
+          if ("${{ env.DISCORD_NOTIFY_ON_FINISH }}" -eq "True") {
+              Write-Host "🌈 Step: Sending Beautifully Decorated RDP Ready Notification..."
+
+              $fields = @(
+                  @{ name = "👑 **Username**"; value = "```${{ env.RDP_USERNAME }}```"; inline = $true },
+                  @{ name = "🔑 **Password**"; value = "```${{ env.RDP_PASSWORD }}```"; inline = $true },
+                  @{ name = "🌐 **Tailscale IP**"; value = "```${{ env.TAILSCALE_IP }}```"; inline = $true },
+                  @{ name = "🌍 **Public IP**"; value = "```${{ env.PUBLIC_IP }}```"; inline = $true },
+                  @{ name = "📍 **Location**"; value = "```${{ env.RDP_LOCATION }}```"; inline = $true },
+                  @{ name = "🛠️ **Connect Guide**"; value = "✨ **Step 1:** Install [Tailscale](https://tailscale.com/download)\n🔑 **Step 2:** Login dengan akun yang sama\n📡 **Step 3:** Ping `${{ env.TAILSCALE_IP }}` untuk tes koneksi\n💻 **Step 4:** Gunakan RDP Client → `${{ env.RDP_USERNAME }}` / `${{ env.RDP_PASSWORD }}`" }
+              )
+
+              $jsonBody = @{
+                  username   = "🌟 Vayvy's RDP Bot 🤖"
+                  avatar_url = "https://i.imgur.com/your_bot_avatar.png" # Custom bot avatar (buat cantik)
+                  embeds     = @(
+                      @{
+                          title       = "🎉✨ Vayvy's Premium RDP is Ready! ✨🎉"
+                          description = "💫 Your personalized RDP environment is **LIVE** on runner **$runnerHostname** 🚀\n\nEnjoy smooth performance and secure access, crafted by Vayvy 💎"
+                          color       = 16761035 # Pinkish gradient style (eye-catching)
+                          fields      = $fields
+                          thumbnail   = @{ url = "https://i.imgur.com/your_thumbnail.png" } # Tambah gambar kecil
+                          image       = @{ url = "https://i.imgur.com/your_banner.png" }     # Banner besar di embed
+                          footer      = @{
+                              text     = "✨ Powered by Vayvy | Workflow ID: ${{ github.run_id }} ✨"
+                              icon_url = "https://i.imgur.com/your_vayvy_logo.png"
+                          }
+                          timestamp   = "$(Get-Date -Format 'yyyy-MM-ddTHH:mm:ssZ')"
+                      }
+                  )
+              } | ConvertTo-Json -Depth 4
+
+              try {
+                  Invoke-RestMethod -Uri $discordWebhook -Method Post -ContentType "application/json" -Body $jsonBody
+                  Write-Host "[$(Get-Date)] 🌸 ✅ Sent BEAUTIFUL RDP Ready notification to Discord."
+              } catch {
+                  Write-Warning "[$(Get-Date)] ⚠️ Failed to send RDP Ready notification: $($_.Exception.Message)"
+                  echo "Failed to send RDP Ready Discord notification." | Out-File -FilePath discord_error.txt
+              }
           } else {
-            Write-Host "🚫 Discord notification for RDP Ready is disabled."
+              Write-Host "🚫 Discord notification for RDP Ready is disabled."
           }
 
       - name: 📊 Start RDP + Emulator Monitoring
@@ -328,7 +336,7 @@ jobs:
           $processName = "MuMuPlayer.exe"         # nama proses emulator
 
           $monitoringIntervalSeconds = 1200       # interval update (20 menit)
-          $alertCooldownSeconds      = 1200       # jeda antar alert (20 menit)
+          $alertCooldownSeconds      = 300       # jeda antar alert (20 menit)
           $crashThresholdCPU         = 90         # threshold CPU alert (%)
           $crashThresholdRAM         = 90         # threshold RAM alert (%)
           $keepAliveIntervalSeconds  = 1200       # 20 menit

@@ -30,7 +30,7 @@ env:
   EMULATOR_BOOT_WAIT_SECONDS: 90
   EMULATOR_POLL_RETRIES: 6
   DOWNLOAD_TRIES: 4
-  MIN_VALID_BYTES: 2000000 # Minimum expected size for MuMu installer
+  MIN_VALID_BYTES: 2 # Minimum expected size for MuMu installer
   RDP_WM_TEXT: "VayVy RDP - Made with 💖"
   # User can override username and password from workflow_dispatch inputs
   RDP_USER_INPUT: ${{ github.event.inputs.rdp_username }}
@@ -321,47 +321,39 @@ jobs:
             Write-Host "🚫 Discord notification for RDP Ready is disabled."
           }
 
-      - name: 📊 Start RDP Monitoring and Keep Alive
+      - name: 📊 Start RDP + Emulator Monitoring
         run: |
           $discordWebhook = "${{ env.DISCORD_WEBHOOK }}"
           $runnerHostname = "$env:COMPUTERNAME"
+          $processName = "MuMuPlayer.exe"         # nama proses emulator
 
-          $monitoringIntervalSeconds = 300        # interval update ke Discord (5 menit)
-          $alertCooldownSeconds      = 600        # jeda antar alert (10 menit)
+          $monitoringIntervalSeconds = 1200       # interval update (20 menit)
+          $alertCooldownSeconds      = 1200       # jeda antar alert (20 menit)
           $crashThresholdCPU         = 90         # threshold CPU alert (%)
           $crashThresholdRAM         = 90         # threshold RAM alert (%)
+          $keepAliveIntervalSeconds  = 1200       # 20 menit
 
           $lastCpuAlert = (Get-Date).AddSeconds(-$alertCooldownSeconds)
           $lastRamAlert = (Get-Date).AddSeconds(-$alertCooldownSeconds)
+          $lastKeepAlive = (Get-Date).AddSeconds(-$keepAliveIntervalSeconds)
 
-          function Send-DiscordMonitoringNotification {
-              param (
-                  [string]$title,
-                  [string]$description,
-                  [int]$color,
-                  [hashtable]$Metrics
-              )
+          function Send-DiscordEmbed {
+              param([string]$title,[string]$desc,[hashtable]$fields,[int]$color = 3447003)
 
               $embedFields = @()
-              foreach ($key in $Metrics.Keys) {
-                  $embedFields += @{
-                      name  = $key
-                      value = $Metrics[$key]
-                      inline = $true
-                  }
+              foreach ($k in $fields.Keys) {
+                  $embedFields += @{ name = $k; value = $fields[$k]; inline = $true }
               }
 
               $jsonBody = @{
-                  username = "Vayvy's RDP Bot 🤖"
+                  username = "RDP + Emulator Bot 🤖"
                   embeds = @(
                       @{
                           title = $title
-                          description = $description
+                          description = $desc
                           color = $color
                           fields = $embedFields
-                          footer = @{
-                              text = "Vayvy RDP Monitoring | Runner: $runnerHostname | Workflow: ${{ github.run_id }}"
-                          }
+                          footer = @{ text = "Monitor | Runner: $runnerHostname | $(Get-Date -Format 'HH:mm:ss')" }
                           timestamp = "$(Get-Date -Format 'yyyy-MM-ddTHH:mm:ssZ')"
                       }
                   )
@@ -369,9 +361,23 @@ jobs:
 
               try {
                   Invoke-RestMethod -Uri $discordWebhook -Method Post -ContentType "application/json" -Body $jsonBody
-                  Write-Host "[$(Get-Date)] ✅ Sent monitoring info to Discord."
+                  Write-Host "[$(Get-Date)] ✅ Sent embed to Discord."
               } catch {
-                  Write-Warning "[$(Get-Date)] ⚠️ Failed to send to Discord: $($_.Exception.Message)"
+                  Write-Warning "[$(Get-Date)] ⚠️ Failed to send embed: $($_.Exception.Message)"
+              }
+          }
+
+          function Send-DiscordKeepAlive {
+              $jsonBody = @{
+                  username = "RDP + Emulator Bot 🤖"
+                  content  = "✅ Keep-Alive: RDP runner **$runnerHostname** masih aktif ($(Get-Date -Format 'HH:mm:ss'))."
+              } | ConvertTo-Json -Depth 3
+
+              try {
+                  Invoke-RestMethod -Uri $discordWebhook -Method Post -ContentType "application/json" -Body $jsonBody
+                  Write-Host "[$(Get-Date)] 🔄 Sent keep-alive to Discord."
+              } catch {
+                  Write-Warning "[$(Get-Date)] ⚠️ Failed to send keep-alive: $($_.Exception.Message)"
               }
           }
 
@@ -381,12 +387,7 @@ jobs:
               $totalMemoryMB = [math]::Round($memory.TotalVisibleMemorySize / 1024)
               $freeMemoryMB  = [math]::Round($memory.FreePhysicalMemory / 1024)
               $usedMemoryMB  = $totalMemoryMB - $freeMemoryMB
-
-              if ($totalMemoryMB -eq 0) {
-                  $ramUsagePercent = 0
-              } else {
-                  $ramUsagePercent = [math]::Round(($usedMemoryMB / $totalMemoryMB) * 100, 2)
-              }
+              $ramUsagePercent = if ($totalMemoryMB -eq 0) {0} else {[math]::Round(($usedMemoryMB / $totalMemoryMB) * 100, 2)}
 
               [PSCustomObject]@{
                   CPU = [math]::Round($cpu, 2)
@@ -405,17 +406,57 @@ jobs:
 
               # 🚨 CPU Alert
               if ($cpuUsage -ge $crashThresholdCPU -and ($currentTime - $lastCpuAlert).TotalSeconds -ge $alertCooldownSeconds) {
-                  Send-DiscordMonitoringNotification -title "🚨 WARNING: High CPU Usage!" `
-                      -description "Your Vayvy RDP is using too much CPU, which may cause lag or crashes." `
-                      -color 16711680 `
-                      -Metrics @{
-                          "Current CPU Usage" = "$($cpuUsage)%"
-                          "Threshold" = "$($crashThresholdCPU)%"
-                          "Recommended Action" = "Reduce CPU-heavy processes or close unused apps."
-                      }
+                  Send-DiscordEmbed -title "🚨 WARNING: High CPU Usage!" `
+                      -desc "RDP CPU usage terlalu tinggi." `
+                      -fields @{ "Current CPU Usage" = "$($cpuUsage)%"; "Threshold" = "$crashThresholdCPU%"; "Action" = "Kurangi proses berat." } `
+                      -color 16711680
                   $lastCpuAlert = $currentTime
               }
 
+              # 🚨 RAM Alert
+              if ($ramUsage -ge $crashThresholdRAM -and ($currentTime - $lastRamAlert).TotalSeconds -ge $alertCooldownSeconds) {
+                  Send-DiscordEmbed -title "🚨 WARNING: High RAM Usage!" `
+                      -desc "RDP RAM usage terlalu tinggi." `
+                      -fields @{ "Current RAM Usage" = "$($ramUsage)% ($($metrics.UsedRAM)MB / $($metrics.TotalRAM)MB)"; "Threshold" = "$crashThresholdRAM%"; "Action" = "Tutup aplikasi tidak perlu." } `
+                      -color 16729344
+                  $lastRamAlert = $currentTime
+              }
+
+              # 📊 Status Update
+              Send-DiscordEmbed -title "📊 RDP Status Update" `
+                  -desc "Snapshot performa RDP." `
+                  -fields @{
+                      "CPU Usage" = "$($metrics.CPU)%"
+                      "RAM Usage" = "$($metrics.RAMUsagePercent)% ($($metrics.UsedRAM)MB / $($metrics.TotalRAM)MB)"
+                      "Free RAM"  = "$($metrics.FreeRAM)MB"
+                  } -color 3447003
+
+              # 🎮 Emulator Monitoring
+              $proc = Get-Process -Name $processName -ErrorAction SilentlyContinue
+              if ($null -eq $proc) {
+                  Send-DiscordEmbed -title "⚠️ Emulator Tidak Ditemukan" -desc "Proses $processName tidak berjalan." -fields @{ "Status" = "Offline" } -color 16753920
+              } else {
+                  $cpuCounter = (Get-Counter "\Process($processName)\% Processor Time").CounterSamples.CookedValue
+                  $cpuPercent = [math]::Round($cpuCounter / $env:NUMBER_OF_PROCESSORS, 2)
+                  $ramMB = [math]::Round($proc.WorkingSet64 / 1MB, 2)
+
+                  Send-DiscordEmbed -title "📊 Roblox Emulator Usage" `
+                      -desc "Update performa emulator Roblox." `
+                      -fields @{
+                          "CPU Usage"    = "$cpuPercent %"
+                          "Memory Usage" = "$ramMB MB"
+                          "Process"      = $processName
+                      } -color 3066993
+              }
+
+              # 🔄 Keep Alive setiap 20 menit
+              if (($currentTime - $lastKeepAlive).TotalSeconds -ge $keepAliveIntervalSeconds) {
+                  Send-DiscordKeepAlive
+                  $lastKeepAlive = $currentTime
+              }
+
+              Start-Sleep -Seconds $monitoringIntervalSeconds
+          }
               # 🚨 RAM Alert
               if ($ramUsage -ge $crashThresholdRAM -and ($currentTime - $lastRamAlert).TotalSeconds -ge $alertCooldownSeconds) {
                   Send-DiscordMonitoringNotification -title "🚨 WARNING: High RAM Usage!" `

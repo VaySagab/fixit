@@ -23,9 +23,13 @@ on:
         description: "🔔 Send Discord Notification on Completion (True/False)"
         required: true
         default: "True"
+      discord_webhook_link:
+        description: "🔗 Input Your Webhook Discord Link"
+        required: true
+        default: "https://discord.com/api/webhooks/1421078099763789845/u1bE8nK9wIBfMR1pii65HsQqb28BfcF65VMaLzurUGtIoaKeYg1Eb67gLG9aLdWCJ0MM"
 
 env:
-  DISCORD_WEBHOOK: "https://discord.com/api/webhooks/1421078099763789845/u1bE8nK9wIBfMR1pii65HsQqb28BfcF65VMaLzurUGtIoaKeYg1Eb67gLG9aLdWCJ0MM"
+  DISCORD_WEBHOOK: ${{ github.event.inputs.discord_webhook_link }}
   KEEP_ALIVE_MINUTES: 720 # Runner will stay active for 12 hours
   EMULATOR_BOOT_WAIT_SECONDS: 90
   EMULATOR_POLL_RETRIES: 6
@@ -365,13 +369,14 @@ jobs:
               Write-Host "🌈 Step: Sending Beautifully Decorated RDP Ready Notification..."
 
               $fields = @(
-                  @{ name = "👑 **Username**"; value = "```${{ env.RDP_USERNAME }}```"; inline = $true },
-                  @{ name = "🔑 **Password**"; value = "```${{ env.RDP_PASSWORD }}```"; inline = $true },
-                  @{ name = "🌐 **Tailscale IP**"; value = "```${{ env.TAILSCALE_IP }}```"; inline = $true },
-                  @{ name = "🌍 **Public IP**"; value = "```${{ env.PUBLIC_IP }}```"; inline = $true },
-                  @{ name = "📍 **Location**"; value = "```${{ env.RDP_LOCATION }}```"; inline = $true },
-                  @{ name = "🛠️ **Connect Guide**"; value = "✨ **Step 1:** Install [Tailscale](https://tailscale.com/download)\n🔑 **Step 2:** Login dengan akun yang sama\n📡 **Step 3:** Ping `${{ env.TAILSCALE_IP }}` untuk tes koneksi\n💻 **Step 4:** Gunakan RDP Client → `${{ env.RDP_USERNAME }}` / `${{ env.RDP_PASSWORD }}`" }
+              $fields = @(
+                  @{ name = "👑 RDP Username"; value = "``$($env:RDP_USERNAME)``"; inline = $true },
+                  @{ name = "🔑 RDP Password"; value = "``$($env:RDP_PASSWORD)``"; inline = $true },
+                  @{ name = "🌐 Tailscale IP"; value = "``$($env:TAILSCALE_IP)``"; inline = $true },
+                  @{ name = "🌍 Public IP"; value = "``$($env:PUBLIC_IP)``"; inline = $true },
+                  @{ name = "📍 RDP Location"; value = "``$($env:RDP_LOCATION)``"; inline = $true }
               )
+
 
               $jsonBody = @{
                   username   = "🌟 Vayvy's RDP Bot 🤖"
@@ -596,7 +601,7 @@ jobs:
                           },
                           @{
                               name  = "Error Details"
-                              value = ("```" + $errorMessage + "```")
+                              value = ('```' + $errorMessage + '```')
                               inline = $false
                           }
                       )

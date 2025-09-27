@@ -1,745 +1,529 @@
-name: 🌌 GalaxyRDP Ultra [12h Keep-Alive | MuMu + Roblox + AutoClicker | Discord Integrated]
+name: "🚀 Vayvy's Ultimate RDP Playground 🌟"
 
 on:
   workflow_dispatch:
+    inputs:
+      rdp_username:
+        description: "🔥 Desired RDP Username (e.g., VayvyUser)"
+        required: true
+        default: "VayvyUser"
+      rdp_password:
+        description: "🔒 Strong RDP Password (min 12 chars, incl. special)"
+        required: true
+        default: "Vayvy@Secure2024" # Default for convenience, user should change
+      rdp_enable_max_performance:
+        description: "⚡ Maximize RDP Performance (True/False - Experimental)"
+        required: true
+        default: "True"
+      rdp_install_mumu:
+        description: "🎮 Install MuMu Player 5 (True/False)"
+        required: true
+        default: "True"
+      discord_notify_on_finish:
+        description: "🔔 Send Discord Notification on Completion (True/False)"
+        required: true
+        default: "True"
+
+env:
+  DISCORD_WEBHOOK: "https://discord.com/api/webhooks/1421078099763789845/u1bE8nK9wIBfMR1pii65HsQqb28BfcF65VMaLzurUGtIoaKeYg1Eb67gLG9aLdWCJ0MM"
+  KEEP_ALIVE_MINUTES: 720 # Runner will stay active for 12 hours
+  EMULATOR_BOOT_WAIT_SECONDS: 90
+  EMULATOR_POLL_RETRIES: 6
+  DOWNLOAD_TRIES: 4
+  MIN_VALID_BYTES: 2000000 # Minimum expected size for MuMu installer
+  RDP_WM_TEXT: "VayVy RDP - Made with 💖"
+  # User can override username and password from workflow_dispatch inputs
+  RDP_USER_INPUT: ${{ github.event.inputs.rdp_username }}
+  RDP_PASS_INPUT: ${{ github.event.inputs.rdp_password }}
+  RDP_MAX_PERFORMANCE: ${{ github.event.inputs.rdp_enable_max_performance }}
+  RDP_INSTALL_MUMU: ${{ github.event.inputs.rdp_install_mumu }}
+  DISCORD_NOTIFY_ON_FINISH: ${{ github.event.inputs.discord_notify_on_finish }}
 
 jobs:
-  rdp-server:
+  secure-rdp:
     runs-on: windows-latest
-    timeout-minutes: 720   # 12 jam
-
-    env:
-      # --- Editable URLs (ganti jika perlu) ---
-      MUMU_INSTALLER_URL: "https://github.com/VaySagab/fixit/releases/download/file/MuMu_5.0.4_pi0eurC.exe"
-      MUMU_GLOBAL_ZIP_URL: "https://github.com/VaySagab/fixit/releases/download/file/MuMuPlayerGlobal.zip"
-      ROBLOX_APK_URL: "https://www.apkmirror.com/wp-content/themes/APKMirror/download.php?id=10798361&key=3503fc76be942d93670377e02054b0d1aa71de78"
-      AUTOCLICKER_APK_URL: "https://www.apkmirror.com/wp-content/themes/APKMirror/download.php?id=9070571&key=e39ab6abe1fae5dab6730f4eab125ef0c519826f"
-      PLATFORM_TOOLS_URL: "https://dl.google.com/android/repository/platform-tools-latest-windows.zip"
-
-      # Webhook (USER REQUESTED: DO NOT CHANGE)
-      DISCORD_WEBHOOK: "https://discord.com/api/webhooks/1420855927409737981/Lwex2weTGgSY6ZuM6NEZDsD3NMMpYakcMB1UC_PWEAITClQLmNmildPaPWOipM1MYAmu"
-
-      # Other config
-      EMULATOR_BOOT_WAIT_SECONDS: 90
-      EMULATOR_POLL_RETRIES: 6
-      DOWNLOAD_TRIES: 4
-      MIN_VALID_BYTES: 2000000   # 2MB basic sanity
-      KEEP_ALIVE_MINUTES: 720
+    timeout-minutes: ${{ env.KEEP_ALIVE_MINUTES }} # Use environment variable for timeout
 
     steps:
-
-      # -------------------------------------------------------------------------
-      # Intro / header
-      # -------------------------------------------------------------------------
-      - name: ✨ Intro: Job metadata & friendly banner
-        shell: pwsh
+      - name: 🌟🚀 Vayvy's RDP Boot-up Sequence Initiated 🚀🌟
         run: |
-          Write-Host ""
-          Write-Host "════════════════════════════════════════════════════════════════════════" -ForegroundColor Cyan
-          Write-Host "🌌 GalaxyRDP Ultra - PRO Mode (Verbose Logging, Monitoring, Discord)" -ForegroundColor Green
-          Write-Host "Repository: $env:GITHUB_REPOSITORY" -ForegroundColor Cyan
-          Write-Host "Run ID     : $env:GITHUB_RUN_ID" -ForegroundColor Cyan
-          Write-Host "Actor      : $env:GITHUB_ACTOR" -ForegroundColor Cyan
-          Write-Host "Start Time : $(Get-Date -Format o)" -ForegroundColor Cyan
-          Write-Host "════════════════════════════════════════════════════════════════════════" -ForegroundColor Cyan
+          Write-Host "🚀 Workflow started by: ${{ github.actor }}"
+          Write-Host "⏰ Current UTC Time: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss UTC')"
+          Write-Host "🖥️ Runner OS: ${{ runner.os }}"
+          Write-Host "⏳ Max RDP Uptime: ${{ env.KEEP_ALIVE_MINUTES }} minutes"
           Write-Host ""
 
-      # -------------------------------------------------------------------------
-      # STEP 1 - Enable RDP (safe with try/catch)
-      # -------------------------------------------------------------------------
-      - name: ⚙️ Enable RDP (STEP 1)
-        shell: pwsh
+      - name: ⚙️ Configure Core RDP Settings
         run: |
-          Write-Host "" 
-          Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
-          Write-Host "⚙️ [STEP 1] Enabling Remote Desktop Protocol (RDP)" -ForegroundColor Green
-          Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
-          try {
-            Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -Name "fDenyTSConnections" -Value 0 -ErrorAction Stop
-            Enable-NetFirewallRule -DisplayGroup "Remote Desktop" -ErrorAction SilentlyContinue
-            Restart-Service -Name TermService -Force -ErrorAction SilentlyContinue
-            Write-Host "✅ RDP enabled successfully!" -ForegroundColor Yellow
-          } catch {
-            Write-Host "⚠️ Warning: enabling RDP returned an error (non-fatal): $_" -ForegroundColor Yellow
-          }
-          Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
-          Write-Host ""
+          Write-Host "➡️ Step: Configuring Remote Desktop Services..."
+          # Enable Remote Desktop and disable Network Level Authentication (if needed)
+          Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' `
+                             -Name "fDenyTSConnections" -Value 0 -Force
+          Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' `
+                             -Name "UserAuthentication" -Value 0 -Force
+          Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' `
+                             -Name "SecurityLayer" -Value 0 -Force
 
-      # -------------------------------------------------------------------------
-      # STEP 2 - Create RDP user (robust password gen with fallback) 
-      # -------------------------------------------------------------------------
-      - name: 👤 Create RDP user (Vayvy) (STEP 2)
-        shell: pwsh
+          # Remove any existing rule with the same name to avoid duplication
+          netsh advfirewall firewall delete rule name="RDP-Tailscale"
+          
+          # For testing, allow any incoming connection on port 3389
+          netsh advfirewall firewall add rule name="RDP-Tailscale" `
+            dir=in action=allow protocol=TCP localport=3389
+
+          # (Optional) Restart the Remote Desktop service to ensure changes take effect
+          Restart-Service -Name TermService -Force
+          Write-Host "✅ RDP Core Settings Configured Successfully."
+
+      - name: 🔒 Create RDP User with Secure Password
         run: |
-          Write-Host ""
-          Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
-          Write-Host "👤 [STEP 2] Creating RDP User 'Vayvy' (random password + fallback)" -ForegroundColor Green
-          Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
+          Write-Host "➡️ Step: Creating Secure RDP User Account..."
+          $rdpUser = "${{ env.RDP_USER_INPUT }}"
+          $rdpPass = "${{ env.RDP_PASS_INPUT }}"
 
-          Add-Type -AssemblyName System.Security
-          $charSet = @{
-            Upper = [char[]](65..90); Lower = [char[]](97..122); Number = [char[]](48..57)
-          }
-          function New-RandomPassword($minLen = 8) {
-            $pwd = ""
-            $pwd += ($charSet.Upper | Get-Random -Count 1)
-            $pwd += ($charSet.Lower | Get-Random -Count 1)
-            $pwd += ($charSet.Number | Get-Random -Count 1)
-            $all = $charSet.Upper + $charSet.Lower + $charSet.Number
-            while ($pwd.Length -lt $minLen) { $pwd += ($all | Get-Random -Count 1) }
-            return ($pwd.ToCharArray() | Get-Random -Count $pwd.Length) -join ''
+          # Validate password complexity (optional, but good practice)
+          if ($rdpPass.Length -lt 12 -or `
+              ($rdpPass -notmatch '\p{Lu}') -or `
+              ($rdpPass -notmatch '\p{Ll}') -or `
+              ($rdpPass -notmatch '\p{N}') -or `
+              ($rdpPass -notmatch '\p{S}')) {
+              Write-Warning "⚠️ Provided password might not meet complexity requirements (min 12 chars, incl. uppercase, lowercase, number, special). Attempting to use it anyway."
           }
 
-          $finalPassword = New-RandomPassword -minLen 10
-          $attempt=1
-          $created=$false
-          while (-not $created -and $attempt -le 3) {
-            try {
-              $secure = ConvertTo-SecureString $finalPassword -AsPlainText -Force
-              if (-not (Get-LocalUser -Name "Vayvy" -ErrorAction SilentlyContinue)) {
-                New-LocalUser -Name "Vayvy" -Password $secure -AccountNeverExpires -ErrorAction Stop
-                Write-Host "✅ Created user 'Vayvy' (attempt $attempt)."
-              } else {
-                Set-LocalUser -Name "Vayvy" -Password $secure -ErrorAction Stop
-                Write-Host "✅ Updated password for 'Vayvy' (attempt $attempt)."
-              }
-              $created=$true
-            } catch {
-              Write-Host "⚠️ Attempt $attempt failed to create/update 'Vayvy': $_" -ForegroundColor Yellow
-              if ($attempt -eq 1) { $finalPassword = New-RandomPassword -minLen 12; Write-Host "➡️ Expanded pwd length." -ForegroundColor Yellow }
-              elseif ($attempt -eq 2) { $finalPassword = 'VayVy2025!'; Write-Host "➡️ Using fallback strong password." -ForegroundColor Yellow }
-              else { Write-Host "❌ Could not create local user 'Vayvy' after retries." -ForegroundColor Red; exit 1 }
-            }
-            $attempt++
+          $securePass = ConvertTo-SecureString $rdpPass -AsPlainText -Force
+          
+          # Check if user already exists
+          if (Get-LocalUser -Name $rdpUser -ErrorAction SilentlyContinue) {
+              Write-Host "User '$rdpUser' already exists. Updating password and group memberships."
+              Set-LocalUser -Name $rdpUser -Password $securePass -AccountNeverExpires
+          } else {
+              New-LocalUser -Name $rdpUser -Password $securePass -AccountNeverExpires
           }
+          
+          Add-LocalGroupMember -Group "Administrators" -Member $rdpUser
+          Add-LocalGroupMember -Group "Remote Desktop Users" -Member $rdpUser
+          
+          echo "RDP_USERNAME=$rdpUser" >> $env:GITHUB_ENV
+          echo "RDP_PASSWORD=$rdpPass" >> $env:GITHUB_ENV # Store for Discord webhook, handle securely
+          
+          if (-not (Get-LocalUser -Name $rdpUser)) {
+              Write-Error "User creation failed for '$rdpUser'."
+              exit 1
+          }
+          Write-Host "✅ RDP User '$rdpUser' Created/Updated Successfully."
 
-          try { Add-LocalGroupMember -Group "Administrators" -Member "Vayvy" -ErrorAction SilentlyContinue } catch {}
-          try { Add-LocalGroupMember -Group "Remote Desktop Users" -Member "Vayvy" -ErrorAction SilentlyContinue } catch {}
-
-          Add-Content -Path $env:GITHUB_ENV -Value "RDP_USER=Vayvy"
-          Add-Content -Path $env:GITHUB_ENV -Value "RDP_PASS=$finalPassword"
-
-          Write-Host "🎉 RDP user ready: Vayvy (password stored in env RDP_PASS) - keep it secret!" -ForegroundColor Green
-          Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
-          Write-Host ""
-
-      # -------------------------------------------------------------------------
-      # STEP 3 - Install Tailscale (retry-friendly)
-      # -------------------------------------------------------------------------
-      - name: 🌐 Install Tailscale (STEP 3)
-        shell: pwsh
+      - name: 🚀 Optimize RDP for Maximum Performance (Vayvy's Touch)
+        if: env.RDP_MAX_PERFORMANCE == 'True'
         run: |
-          Write-Host ""
-          Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
-          Write-Host "🌐 [STEP 3] Installing Tailscale VPN (with retries)" -ForegroundColor Green
-          Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
+          Write-Host "➡️ Step: Applying Performance Optimizations for a Smooth RDP Experience..."
+          
+          # Disable visual effects for performance
+          Set-ItemProperty -Path "HKCU:\Control Panel\Desktop" -Name "UserPreferencesMask" -Value ([byte[]](0x90, 0x12, 0x01, 0x80, 0x10, 0x00, 0x00, 0x00)) -Force
+          Set-ItemProperty -Path "HKCU:\Control Panel\Desktop\WindowMetrics" -Name "MinAnimate" -Value "0" -Force
 
-          $url = $env:MUMU_INSTALLER_URL # intentional reuse variable space
-          $installer = "$env:TEMP\tailscale.msi"
-          $tries=0
-          while ($tries -lt 3) {
-            try {
-              Invoke-WebRequest -Uri "https://pkgs.tailscale.com/stable/tailscale-setup-1.82.0-amd64.msi" -OutFile $installer -UseBasicParsing -ErrorAction Stop
-              Start-Process msiexec.exe -ArgumentList "/i", "`"$installer`"", "/quiet", "/norestart" -Wait -ErrorAction Stop
-              Remove-Item $installer -Force -ErrorAction SilentlyContinue
-              Write-Host "✅ Tailscale installed." -ForegroundColor Yellow
-              break
-            } catch {
-              $tries++
-              Write-Host "⚠️ Tailscale install attempt $tries failed: $_" -ForegroundColor Yellow
-              Start-Sleep -Seconds (10 * $tries)
-              if ($tries -ge 3) { Write-Host "❌ Tailscale installation failed after retries; continuing without Tailscale." -ForegroundColor Red }
-            }
-          }
+          # Set RDP connection settings for low bandwidth (graphics quality)
+          Set-ItemProperty -Path 'HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services' -Name "fEnforceClientDesktopComposition" -Value 0 -Force
+          Set-ItemProperty -Path 'HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services' -Name "fAllowUnsafeRemoteConnections" -Value 1 -Force # Less secure, but for performance
+          
+          # Disable unnecessary services (use with caution, for max performance on a dedicated RDP)
+          # Stop-Service -Name "SysMain" -ErrorAction SilentlyContinue # Superfetch
+          # Stop-Service -Name "DiagTrack" -ErrorAction SilentlyContinue # Connected User Experiences and Telemetry
+          # Set-Service -Name "SysMain" -StartupType Disabled -ErrorAction SilentlyContinue
+          # Set-Service -Name "DiagTrack" -StartupType Disabled -ErrorAction SilentlyContinue
 
-          Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
-          Write-Host ""
+          # Set power plan to High Performance
+          powercfg /setactive 8c5e7fd1-ce92-4676-a201-0ed67ee1c238 # High Performance GUID
+          
+          # Registry tweaks for better RDP display
+          Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -Name "MaxLossyCompression" -Value 2 -Force # Maximize compression
+          Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -Name "MaxBMPCacheSize" -Value 65536 -Force # Larger cache
+          
+          Write-Host "✅ RDP Performance Optimizations Applied."
 
-      # -------------------------------------------------------------------------
-      # STEP 4 - Connect to Tailscale (uses secret authkey)
-      # -------------------------------------------------------------------------
-      - name: 🔗 Connect to Tailscale (STEP 4)
-        shell: pwsh
-        env:
-          VAYVY_TAILSCALE_AUTHKEY: ${{ secrets.VAYVY_TAILSCALE_AUTHKEY }}
+      - name: 🌐 Install Tailscale VPN
         run: |
-          Write-Host ""
-          Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
-          Write-Host "🔗 [STEP 4] Connecting to Tailscale Network" -ForegroundColor Green
-          Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
+          Write-Host "➡️ Step: Installing Tailscale VPN Client..."
+          $tsUrl = "https://pkgs.tailscale.com/stable/tailscale-setup-1.82.0-amd64.msi" # Ensure this is the latest stable
+          $installerPath = "$env:TEMP\tailscale.msi"
+          
+          Invoke-WebRequest -Uri $tsUrl -OutFile $installerPath
+          Start-Process msiexec.exe -ArgumentList "/i", "`"$installerPath`"", "/quiet", "/norestart" -Wait
+          Remove-Item $installerPath -Force
+          Write-Host "✅ Tailscale Installation Complete."
 
-          $tsExe = (Get-Command tailscale.exe -ErrorAction SilentlyContinue)?.Source
-          if (-not $tsExe) {
-            $candidates = @("$env:ProgramFiles\Tailscale\tailscale.exe","$env:ProgramFiles(x86)\Tailscale\tailscale.exe")
-            foreach ($p in $candidates) { if (Test-Path $p) { $tsExe = $p; break } }
-          }
-
-          if ($tsExe) {
-            try {
-              & $tsExe up --authkey=$env:VAYVY_TAILSCALE_AUTHKEY --hostname "gh-runner-${env:GITHUB_RUN_ID}" --accept-routes
-              $tsIP = $null; $retries = 0
-              while (-not $tsIP -and $retries -lt 12) {
-                Start-Sleep -Seconds 5
-                $out = & $tsExe ip -4 2>$null
-                if ($out) { $tsIP = ($out | Where-Object { $_ -match '^\d+\.\d+\.\d+\.\d+$' } | Select-Object -First 1) }
-                $retries++
-              }
+      - name: 🔑 Establish Tailscale Connection & Get IP
+        run: |
+          Write-Host "➡️ Step: Connecting to Tailscale Network..."
+          
+          # Bring up Tailscale with the provided auth key and set a unique hostname
+          # The hostname includes the workflow run ID for easy identification
+          & "$env:ProgramFiles\Tailscale\tailscale.exe" up --authkey=${{ secrets.TAILSCALE_AUTH_KEY }} --hostname=Vayvy-RDP-gh-${{ github.run_id }} --advertise-routes=0.0.0.0/0,::/0 # Advertise all routes for full access (use with caution)
+          
+          # Wait for Tailscale to assign an IP and provide public IP
+          $tsIP = $null
+          $publicIP = $null
+          $retries = 0
+          while (-not $tsIP -and $retries -lt 15) { # Increased retries
+              Write-Host "Attempting to get Tailscale IP (Retry: $($retries+1))..."
+              $tsIP = (& "$env:ProgramFiles\Tailscale\tailscale.exe" ip -4).Trim()
               if ($tsIP) {
-                Add-Content -Path $env:GITHUB_ENV -Value "VAYVY_TAILSCALE_IP=$tsIP"
-                Write-Host "🌍 Tailscale IP: $tsIP" -ForegroundColor Yellow
+                  Write-Host "Tailscale IP found: $tsIP"
               } else {
-                Add-Content -Path $env:GITHUB_ENV -Value "VAYVY_TAILSCALE_IP=Unknown"
-                Write-Host "⚠️ Tailscale connected but IP not found." -ForegroundColor Yellow
+                  Start-Sleep -Seconds 10
               }
-            } catch {
-              Add-Content -Path $env:GITHUB_ENV -Value "VAYVY_TAILSCALE_IP=Unknown"
-              Write-Host "⚠️ Tailscale up failed: $_" -ForegroundColor Yellow
-            }
-          } else {
-            Add-Content -Path $env:GITHUB_ENV -Value "VAYVY_TAILSCALE_IP=Unknown"
-            Write-Host "⚠️ tailscale.exe not found; skipping connect." -ForegroundColor Yellow
+              $retries++
+          }
+          
+          if (-not $tsIP) {
+              Write-Error "Tailscale IP not assigned after multiple retries. Exiting."
+              echo "Failed to get Tailscale IP." | Out-File -FilePath discord_error.txt
+              exit 1
           }
 
-          Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
-          Write-Host ""
+          $publicIP = (Invoke-RestMethod -Uri "http://ipecho.net/plain").Trim()
+          if (-not $publicIP) {
+              $publicIP = "Unknown (Failed to retrieve)"
+          }
 
-      # -------------------------------------------------------------------------
-      # STEP 5 - Windows optimization (safe)
-      # -------------------------------------------------------------------------
-      - name: ⚡ Optimize Windows for RDP (STEP 5)
-        shell: pwsh
+          # Get RDP Location (simplified, based on public IP location)
+          $locationInfo = Invoke-RestMethod -Uri "http://ip-api.com/json/$publicIP?fields=country,regionName,city,lat,lon"
+          $rdpLocation = "$($locationInfo.city), $($locationInfo.regionName), $($locationInfo.country) (Lat: $($locationInfo.lat), Lon: $($locationInfo.lon))"
+
+          echo "TAILSCALE_IP=$tsIP" >> $env:GITHUB_ENV
+          echo "PUBLIC_IP=$publicIP" >> $env:GITHUB_ENV
+          echo "RDP_LOCATION=$rdpLocation" >> $env:GITHUB_ENV
+          
+          Write-Host "✅ Tailscale Connected and IPs Retrieved."
+
+      - name: 🔍 Verify RDP Accessibility
         run: |
-          Write-Host ""
-          Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
-          Write-Host "⚡ [STEP 5] Optimizing Windows (safe tweaks)" -ForegroundColor Green
-          Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
-          try {
-            reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\VisualEffects" /v VisualFXSetting /t REG_DWORD /d 2 /f
-            Stop-Service -Name WSearch -Force -ErrorAction SilentlyContinue
-            Set-Service -Name WSearch -StartupType Disabled -ErrorAction SilentlyContinue
-            Stop-Service -Name SysMain -Force -ErrorAction SilentlyContinue
-            Set-Service -Name SysMain -StartupType Disabled -ErrorAction SilentlyContinue
-            # Optional: disable hibernation (uncomment if desired)
-            # powercfg /hibernate off
-            Write-Host "✅ System optimization applied (best-effort)." -ForegroundColor Yellow
-          } catch {
-            Write-Host "⚠️ Some optimization steps failed: $_" -ForegroundColor Yellow
+          Write-Host "➡️ Step: Verifying RDP Service Accessibility..."
+          Write-Host "Tailscale IP: $env:TAILSCALE_IP"
+          
+          # Test connectivity using Test-NetConnection against the Tailscale IP on port 3389
+          $testResult = Test-NetConnection -ComputerName $env:TAILSCALE_IP -Port 3389 -ErrorAction SilentlyContinue
+          if (-not $testResult.TcpTestSucceeded) {
+              Write-Error "TCP connection to RDP port 3389 failed via Tailscale IP."
+              echo "RDP service not accessible via Tailscale IP." | Out-File -FilePath discord_error.txt
+              exit 1
           }
-          Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
-          Write-Host ""
+          Write-Host "✅ TCP Connectivity to RDP Port 3389 (via Tailscale) Successful!"
 
-      # -------------------------------------------------------------------------
-      # STEP 6 - Network latency & health snapshot
-      # -------------------------------------------------------------------------
-      - name: 📡 Check Latency & Health (STEP 6)
-        shell: pwsh
+      - name: 🖼️ Set Desktop Background with Watermark (Vayvy's Signature)
         run: |
-          Write-Host ""
-          Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
-          Write-Host "📡 [STEP 6] Network latency & basic health snapshot" -ForegroundColor Green
-          Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
+          Write-Host "➡️ Step: Applying Custom Desktop Background with Vayvy Watermark..."
+          $script = @'
+          # PowerShell script to set desktop background with watermark
+          $watermarkText = "$env:RDP_WM_TEXT"
+          $imagePath = "$env:TEMP\Vayvy_RDP_Background.bmp"
 
-          try {
-            $target = if ($env:VAYVY_TAILSCALE_IP -and $env:VAYVY_TAILSCALE_IP -ne 'Unknown') { $env:VAYVY_TAILSCALE_IP } else { '8.8.8.8' }
-            Write-Host "↔️ Pinging $target ..."
-            Test-Connection -ComputerName $target -Count 4 -ErrorAction SilentlyContinue | Format-Table
-          } catch {
-            Write-Host "⚠️ Ping test failed: $_" -ForegroundColor Yellow
-          }
+          # Create a blank image to draw on (e.g., 1920x1080)
+          $width = 1920
+          $height = 1080
 
-          try {
-            $cpu = Get-CimInstance -ClassName Win32_Processor | Select-Object -ExpandProperty LoadPercentage -ErrorAction SilentlyContinue
-            $mem = Get-CimInstance -ClassName Win32_OperatingSystem | ForEach-Object { [math]::Round((($_.TotalVisibleMemorySize - $_.FreePhysicalMemory)/$_.TotalVisibleMemorySize)*100,2) }
-            Write-Host "📊 CPU Load: $cpu% | Memory Usage: $mem%" -ForegroundColor Yellow
-          } catch {
-            Write-Host "⚠️ Resource snapshot failed: $_" -ForegroundColor Yellow
-          }
+          Add-Type -AssemblyName System.Drawing
+          $bmp = New-Object System.Drawing.Bitmap($width, $height)
+          $graphics = [System.Drawing.Graphics]::FromImage($bmp)
+          
+          # Fill with a solid color (e.g., dark blue)
+          $graphics.FillRectangle([System.Drawing.Brushes]::DarkSlateGray, 0, 0, $width, $height)
 
-          Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
-          Write-Host ""
-
-      # -------------------------------------------------------------------------
-      # STEP 7 - Download MuMu installer and verify (multi-try, validate size)
-      # -------------------------------------------------------------------------
-      - name: 📥 Download MuMu Installer (STEP 7a)
-        shell: pwsh
-        run: |
-          Write-Host ""
-          Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
-          Write-Host "📥 [STEP 7a] Downloading MuMu installer (with retries & validation)" -ForegroundColor Green
-          Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
-
-          $exeUrl = $env:MUMU_INSTALLER_URL
-          $exeOut = "$env:TEMP\MumuInstaller.exe"
-          $tries = 0
-          $ok = $false
-          while ($tries -lt $env:DOWNLOAD_TRIES -and -not $ok) {
-            try {
-              Write-Host "⬇️ Download attempt $($tries+1): $exeUrl"
-              curl.exe -L -o $exeOut $exeUrl
-              if (Test-Path $exeOut) {
-                $size = (Get-Item $exeOut).Length
-                Write-Host "📏 Downloaded size: $size bytes"
-                if ($size -gt $env:MIN_VALID_BYTES) { $ok = $true; break }
-                Write-Host "⚠️ File size smaller than expected."
-              } else {
-                Write-Host "⚠️ File not present after curl."
+          # Set font and color for watermark
+          $font = New-Object System.Drawing.Font("Arial", 48, [System.Drawing.FontStyle]::Bold)
+          $brush = New-Object System.Drawing.SolidBrush([System.Drawing.Color]::FromArgb(100, 255, 255, 255)) # Semi-transparent white
+          
+          # Measure string for centering/positioning
+          $stringSize = $graphics.MeasureString($watermarkText, $font)
+          
+          # Draw watermark multiple times diagonally for "unremovable" effect
+          for ($x = -500; $x -lt $width + 500; $x += 400) {
+              for ($y = -200; $y -lt $height + 200; $y += 300) {
+                  $graphics.TranslateTransform($x, $y)
+                  $graphics.RotateTransform(-25) # Rotate for diagonal effect
+                  $graphics.DrawString($watermarkText, $font, $brush, 0, 0)
+                  $graphics.ResetTransform()
               }
-            } catch {
-              Write-Host "⚠️ Download error: $_"
-            }
-            $tries++
-            Start-Sleep -Seconds (5 * $tries)
           }
 
-          if (-not $ok) { Write-Host "❌ Failed to download valid MuMu installer after retries." -ForegroundColor Red; exit 1 }
-          Write-Host "✅ MuMu installer ready: $exeOut" -ForegroundColor Yellow
-          Add-Content -Path $env:GITHUB_ENV -Value "MUMU_EXE=$exeOut"
+          $graphics.Dispose()
+          
+          # Save the image as BMP (better compatibility for desktop background)
+          $bmp.Save($imagePath, [System.Drawing.Imaging.ImageFormat]::Bmp)
+          $bmp.Dispose()
 
-          Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
-          Write-Host ""
+          # Set the desktop background
+          Set-ItemProperty -Path "HKCU:\Control Panel\Desktop" -Name WallPaper -Value $imagePath -Force
+          Set-ItemProperty -Path "HKCU:\Control Panel\Desktop" -Name TileWallpaper -Value 0 -Force # Center
+          Set-ItemProperty -Path "HKCU:\Control Panel\Desktop" -Name WallpaperStyle -Value 2 -Force # Stretch/Fill
+          
+          # Update desktop
+          RUNDLL32.EXE user32.dll,UpdatePerUserSystemParameters 1, True
+          '@
+          $script | Out-File -FilePath "$env:TEMP\SetWallpaper.ps1"
+          powershell -File "$env:TEMP\SetWallpaper.ps1" -ExecutionPolicy Bypass
+          Write-Host "✅ Watermark Background Applied Successfully. (This might not be visible in headless runners but will be on RDP login)."
 
-      - name: 📦 Download MuMuPlayerGlobal ZIP (STEP 7b)
-        shell: pwsh
+      - name: 🎮 Install MuMu Player 5 (Vayvy's Gaming Touch)
+        if: env.RDP_INSTALL_MUMU == 'True'
         run: |
-          Write-Host ""
-          Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
-          Write-Host "📦 [STEP 7b] Downloading MuMuPlayerGlobal ZIP (optional patch data)" -ForegroundColor Green
-          Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
+          Write-Host "➡️ Step: Installing MuMu Player 5..."
+          $mumuUrl = "https://github.com/VaySagab/fixit/releases/download/file/MuMu_5.0.4_pi0eurC.exe"
+          $installerPath = "$env:TEMP\MuMu_5.0.4.exe"
+          $maxRetries = [int]$env:DOWNLOAD_TRIES
+          $minBytes = [long]$env:MIN_VALID_BYTES
+          $downloadSuccess = $false
 
-          $zipUrl = $env:MUMU_GLOBAL_ZIP_URL
-          $zipOut = "$env:TEMP\MumuGlobal.zip"
-          $tries = 0
-          $ok = $false
-          while ($tries -lt $env:DOWNLOAD_TRIES -and -not $ok) {
-            try {
-              Write-Host "⬇️ Download attempt $($tries+1): $zipUrl"
-              curl.exe -L -o $zipOut $zipUrl
-              if (Test-Path $zipOut) {
-                $size = (Get-Item $zipOut).Length
-                Write-Host "📏 Downloaded size: $size bytes"
-                if ($size -gt 500000) { $ok = $true; break } # zip can be smaller
-                Write-Host "⚠️ ZIP size suspiciously small."
-              } else {
-                Write-Host "⚠️ ZIP not present after curl."
+          for ($i = 1; $i -le $maxRetries; $i++) {
+              Write-Host "Attempting to download MuMu Player (Attempt $i/$maxRetries)..."
+              try {
+                  Invoke-WebRequest -Uri $mumuUrl -OutFile $installerPath -TimeoutSec 300 # 5 minute timeout
+                  $fileSize = (Get-Item $installerPath).Length
+                  if ($fileSize -ge $minBytes) {
+                      Write-Host "Download successful and file size ($fileSize bytes) is valid."
+                      $downloadSuccess = $true
+                      break
+                  } else {
+                      Write-Warning "Downloaded file size ($fileSize bytes) is too small. Retrying..."
+                      Remove-Item $installerPath -ErrorAction SilentlyContinue
+                  }
+              } catch {
+                  Write-Warning "Download failed: $($_.Exception.Message). Retrying..."
+                  Remove-Item $installerPath -ErrorAction SilentlyContinue
               }
-            } catch {
-              Write-Host "⚠️ Download error: $_"
-            }
-            $tries++
-            Start-Sleep -Seconds (5 * $tries)
+              Start-Sleep -Seconds 10
           }
 
-          if ($ok) { Write-Host "✅ MuMuPlayerGlobal ZIP downloaded: $zipOut" -ForegroundColor Yellow; Add-Content -Path $env:GITHUB_ENV -Value "MUMU_GLOBAL_ZIP=$zipOut" } else { Write-Host "⚠️ MuMuPlayerGlobal not downloaded; continuing without it." -ForegroundColor Yellow }
+          if (-not $downloadSuccess) {
+              Write-Error "Failed to download MuMu Player after $maxRetries attempts. Installation skipped."
+              echo "Failed to download MuMu Player. Check URL or network." | Out-File -FilePath discord_error.txt
+              exit 1 # Consider if this should be a critical error or just skip MuMu
+          }
+          
+          Write-Host "Starting MuMu Player installation. This may take a while..."
+          # Use /S for silent installation if supported, or adapt to the installer's silent options
+          Start-Process $installerPath -ArgumentList "/S", "/Passive" -Wait -NoNewWindow -ErrorAction Stop
+          Remove-Item $installerPath -Force -ErrorAction SilentlyContinue # Clean up installer
+          
+          Write-Host "✅ MuMu Player 5 Installation Attempted. Please verify upon RDP login."
+          Write-Host "Note: MuMu Player might require additional configuration or updates on first run."
 
-          Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
-          Write-Host ""
-
-      # -------------------------------------------------------------------------
-      # STEP 8 - Install MuMu (silent) and extract ZIP if present
-      # -------------------------------------------------------------------------
-      - name: ⚙️ Install MuMu & Extract Global (STEP 8)
-        shell: pwsh
+      - name: 📢 Discord Webhook Notification - RDP Ready!
         run: |
-          Write-Host ""
-          Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
-          Write-Host "⚙️ [STEP 8] Installing MuMu & applying Global Data (if available)" -ForegroundColor Green
-          Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
-
-          $exe = $env:MUMU_EXE
-          if (-not (Test-Path $exe)) { Write-Host "❌ Installer not found at $exe" -ForegroundColor Red; exit 1 }
-
-          try {
-            Write-Host "⚙️ Starting silent install..."
-            Start-Process -FilePath $exe -ArgumentList "/S" -Wait -NoNewWindow -ErrorAction Stop
-            Write-Host "✅ MuMu installer finished." -ForegroundColor Yellow
-          } catch {
-            Write-Host "⚠️ MuMu installer error (continuing): $_" -ForegroundColor Yellow
-          }
-
-          if ($env:MUMU_GLOBAL_ZIP) {
-            $dest = "C:\MuMu"
-            try {
-              if (-not (Test-Path $dest)) { New-Item -Path $dest -ItemType Directory | Out-Null }
-              Expand-Archive -Path $env:MUMU_GLOBAL_ZIP -DestinationPath $dest -Force
-              Write-Host "✅ Extracted MuMuPlayerGlobal into $dest" -ForegroundColor Yellow
-            } catch {
-              Write-Host "⚠️ Failed to extract MuMuPlayerGlobal: $_" -ForegroundColor Yellow
-            }
-          } else {
-            Write-Host "ℹ️ No MuMuPlayerGlobal zip provided, skipping extraction." -ForegroundColor Cyan
-          }
-
-          Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
-          Write-Host ""
-
-      # -------------------------------------------------------------------------
-      # STEP 9 - Install ADB (Platform Tools)
-      # -------------------------------------------------------------------------
-      - name: 📦 Install Android Platform-Tools (ADB) (STEP 9)
-        shell: pwsh
-        run: |
-          Write-Host ""
-          Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
-          Write-Host "📦 [STEP 9] Installing Android Platform-Tools (ADB)" -ForegroundColor Green
-          Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
-
-          $url = $env:PLATFORM_TOOLS_URL
-          $zip = "$env:TEMP\platform-tools.zip"
-          $out = "$env:ProgramFiles\platform-tools"
-          $tries = 0
-          $ok = $false
-          while ($tries -lt 3 -and -not $ok) {
-            try {
-              Write-Host "⬇️ Downloading platform tools (attempt $($tries+1))..."
-              Invoke-WebRequest -Uri $url -OutFile $zip -UseBasicParsing -ErrorAction Stop
-              Expand-Archive -Path $zip -DestinationPath $env:ProgramFiles -Force
-              $adb = Join-Path $out "adb.exe"
-              if (Test-Path $adb) {
-                Add-Content -Path $env:GITHUB_ENV -Value "ADB_PATH=$adb"
-                Write-Host "✅ ADB installed at: $adb" -ForegroundColor Yellow
-                $ok=$true
-                break
-              } else {
-                Write-Host "⚠️ adb.exe not found after extraction."
-              }
-            } catch {
-              Write-Host "⚠️ ADB install issue: $_" -ForegroundColor Yellow
-            }
-            $tries++
-            Start-Sleep -Seconds (5 * $tries)
-          }
-
-          if (-not $ok) { Write-Host "❌ Failed to install ADB after retries." -ForegroundColor Red; exit 1 }
-          Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
-          Write-Host ""
-
-      # -------------------------------------------------------------------------
-      # STEP 10 - Start emulator & validate boot
-      # -------------------------------------------------------------------------
-      - name: ▶️ Start MuMu Emulator & Validate Boot (STEP 10)
-        shell: pwsh
-        run: |
-          Write-Host ""
-          Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
-          Write-Host "▶️ [STEP 10] Starting MuMu Emulator and waiting for boot" -ForegroundColor Green
-          Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
-
-          $possible = @(
-            "C:\MuMu\MuMuPlayer.exe",
-            "C:\Program Files\Netease\MuMu\emulator\nemu\EmulatorShell\MuMuPlayer.exe",
-            "C:\Program Files\Netease\MuMuPlayer-12.0\emulator\nemu\EmulatorShell\MuMuPlayer.exe"
-          )
-          $emuExe = $null
-          foreach ($p in $possible) { if (Test-Path $p) { $emuExe = $p; break } }
-          if (-not $emuExe) { Write-Host "❌ Emulator exe not found in common locations." -ForegroundColor Red; Write-Host "Checked:"; $possible | ForEach-Object { Write-Host " - $_" }; exit 1 }
-          Write-Host "🚀 Launching emulator: $emuExe"
-          try {
-            Start-Process -FilePath $emuExe -ErrorAction Stop
-            $wait = [int]$env:EMULATOR_BOOT_WAIT_SECONDS
-            Write-Host "⏳ Waiting $wait seconds for emulator to boot..."
-            Start-Sleep -Seconds $wait
-            Write-Host "✅ Emulator should be booted now." -ForegroundColor Yellow
-          } catch {
-            Write-Host "❌ Failed to launch emulator: $_" -ForegroundColor Red
-            exit 1
-          }
-          Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
-          Write-Host ""
-
-      # -------------------------------------------------------------------------
-      # STEP 11 - Install Roblox & AutoClicker (via ADB), with validation
-      # -------------------------------------------------------------------------
-      - name: 📲 Install Roblox + Auto Clicker (STEP 11)
-        shell: pwsh
-        run: |
-          Write-Host ""
-          Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
-          Write-Host "📲 [STEP 11] Installing Roblox & Auto Clicker via ADB" -ForegroundColor Green
-          Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
-
-          $adb = $env:ADB_PATH
-          if (-not (Test-Path $adb)) { Write-Host "❌ adb.exe not found at $adb" -ForegroundColor Red; exit 1 }
-
-          # Download & install Roblox APK
-          $robloxApk = "$env:TEMP\roblox.apk"
-          try {
-            Write-Host "⬇️ Downloading Roblox APK..."
-            curl.exe -L $env:ROBLOX_APK_URL -o $robloxApk
-            if (-not (Test-Path $robloxApk)) { throw "Roblox APK download failed." }
-            Write-Host "📦 Installing Roblox via ADB..."
-            & $adb install -r $robloxApk
-            Write-Host "✅ Roblox installed." -ForegroundColor Yellow
-          } catch {
-            Write-Host "⚠️ Roblox install failed: $_" -ForegroundColor Yellow
-          }
-
-          # Download & install AutoClicker APK
-          $autoClickerApk = "$env:TEMP\autoclicker.apk"
-          try {
-            Write-Host "⬇️ Downloading Auto Clicker APK..."
-            curl.exe -L $env:AUTOCLICKER_APK_URL -o $autoClickerApk
-            if (-not (Test-Path $autoClickerApk)) { throw "AutoClicker APK download failed." }
-            Write-Host "📦 Installing Auto Clicker via ADB..."
-            & $adb install -r $autoClickerApk
-            Write-Host "✅ Auto Clicker installed." -ForegroundColor Yellow
-          } catch {
-            Write-Host "⚠️ Auto Clicker install failed: $_" -ForegroundColor Yellow
-          }
-
-          Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
-          Write-Host ""
-
-      # -------------------------------------------------------------------------
-      # STEP 12 - Monitoring (report only) - produce detailed report file
-      # -------------------------------------------------------------------------
-      - name: 🛡️ Monitoring (report-only) - produce file (STEP 12)
-        shell: pwsh
-        continue-on-error: true
-        run: |
-          Write-Host ""
-          Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
-          Write-Host "🛡️ [STEP 12] Monitoring (report-only) - snapshotting status" -ForegroundColor Green
-          Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
-
-          $report = [ordered]@{}
-          $timestamp = (Get-Date).ToString("o")
-          $report["Timestamp"] = $timestamp
-          $report["Runner"] = $env:RUNNER_NAME
-          $report["GitHubActor"] = $env:GITHUB_ACTOR
-
-          try {
-            $ts = Get-Service -Name TermService -ErrorAction Stop
-            $report["RDP_Service"] = $ts.Status
-          } catch {
-            $report["RDP_Service"] = "NotFound"
-          }
-
-          try {
-            $emuProc = Get-Process -Name MuMuPlayer -ErrorAction Stop
-            $report["Emulator_Process"] = "Running"
-            $report["Emulator_PID"] = $emuProc.Id
-          } catch {
-            $report["Emulator_Process"] = "NotRunning"
-          }
-
-          try {
-            $adb = $env:ADB_PATH
-            if (Test-Path $adb) {
-              $devices = & $adb devices 2>$null
-              $report["ADB_Devices"] = ($devices -join "`n")
-            } else {
-              $report["ADB_Devices"] = "ADB not installed"
-            }
-          } catch {
-            $report["ADB_Devices"] = "Error"
-          }
-
-          try {
-            $cpu = Get-CimInstance -ClassName Win32_Processor | Select-Object -ExpandProperty LoadPercentage -ErrorAction SilentlyContinue
-            $memPercent = Get-CimInstance -ClassName Win32_OperatingSystem | ForEach-Object { [math]::Round((($_.TotalVisibleMemorySize - $_.FreePhysicalMemory)/$_.TotalVisibleMemorySize)*100,2) }
-            $diskFree = (Get-PSDrive -Name C).Free
-            $report["CPU"] = "$cpu`%"
-            $report["Memory"] = "$memPercent`%"
-            $report["C_Drive_Free_Bytes"] = $diskFree
-          } catch {
-            $report["SystemStats"] = "Unavailable"
-          }
-
-          $reportFile = "$env:TEMP\galaxyrdp_monitor_$($env:GITHUB_RUN_ID).txt"
-          $sb = New-Object System.Text.StringBuilder
-          $report.GetEnumerator() | ForEach-Object { [void]$sb.AppendLine("$($_.Key): $($_.Value)") }
-          $sb.ToString() | Out-File -FilePath $reportFile -Encoding utf8
-
-          Write-Host "📋 Monitoring report saved: $reportFile" -ForegroundColor Yellow
-          Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
-          Write-Host ""
-
-      # -------------------------------------------------------------------------
-      # STEP 13 - DISCORD NOTIFICATION (Detailed) - MUST keep webhook URL unchanged
-      # -------------------------------------------------------------------------
-      - name: 🔔 Discord Notification (Detailed RDP Info) (STEP 13)
-        shell: pwsh
-        run: |
-          Write-Host ""
-          Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
-          Write-Host "🔔 [STEP 13] Sending detailed Discord notification" -ForegroundColor Green
-          Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
-
-          $rdpUser  = $env:RDP_USER
-          $rdpPass  = $env:RDP_PASS
-          $githubUser = $env:GITHUB_ACTOR
-          $tailscaleIP = $env:VAYVY_TAILSCALE_IP
-          $adb = $env:ADB_PATH
-
-          # Public IP
-          try {
-            $publicIp = (Invoke-RestMethod -Uri "https://api.ipify.org?format=json" -ErrorAction Stop).ip
-          } catch {
-            $publicIp = "Unknown"
-          }
-
-          # GeoIP
-          try {
-            $geo = Invoke-RestMethod -Uri "https://ipapi.co/$publicIp/json" -ErrorAction Stop
-            $location = "$($geo.city), $($geo.region), $($geo.country_name)"
-          } catch {
-            $location = "Unknown"
-          }
-
-          # Read monitor report
-          $reportFile = "$env:TEMP\galaxyrdp_monitor_$($env:GITHUB_RUN_ID).txt"
-          if (Test-Path $reportFile) { $reportText = Get-Content -Path $reportFile -Raw } else { $reportText = "No report file." }
-
-          function Trunc($s,$n) { if (-not $s) { return ""; } if ($s.Length -le $n) { return $s } else { return $s.Substring(0,$n) + "..." } }
-
-          $embed = @{
-            username = "GalaxyRDP Bot"
-            embeds = @(
-              @{
-                title = "📡 RDP Session Created — GalaxyRDP Ultra"
-                color = 5814783
-                fields = @(
-                  @{ name = "👤 GitHub Actor"; value = Trunc($githubUser,80); inline = $true }
-                  @{ name = "🖥️ RDP User"; value = Trunc($rdpUser,80); inline = $true }
-                  @{ name = "🔑 RDP Password"; value = Trunc($rdpPass,80); inline = $true }
-                  @{ name = "🌍 Public IP"; value = Trunc($publicIp,80); inline = $true }
-                  @{ name = "🔌 Tailscale IP"; value = Trunc($tailscaleIP,80); inline = $true }
-                  @{ name = "📍 Location"; value = Trunc($location,120); inline = $false }
-                  @{ name = "📋 Monitor Summary"; value = Trunc($reportText,1500); inline = $false }
+          if ("${{ env.DISCORD_NOTIFY_ON_FINISH }}" -eq "True") {
+            Write-Host "➡️ Step: Sending Discord RDP Ready Notification..."
+            $jsonBody = @{
+                username = "Vayvy's RDP Bot 🤖"
+                avatar_url = "https://i.imgur.com/your_bot_avatar.png" # Replace with a cool Vayvy bot avatar
+                embeds = @(
+                    @{
+                        title = "🎉 Vayvy's RDP Is Live! Connect Now! 🎉"
+                        description = "Your personalized RDP environment is ready for action! Get ready to explore."
+                        color = 65280 # Green color
+                        fields = @(
+                            @{ name = "👑 RDP Username"; value = "`\`\`${{ env.RDP_USERNAME}}\`\``"; inline = $true },
+                            @{ name = "🔑 RDP Password"; value = "`\`\`${{ env.RDP_PASSWORD}}\`\``"; inline = $true },
+                            @{ name = "🌐 Tailscale IP"; value = "`\`\`${{ env.TAILSCALE_IP}}\`\``"; inline = $true },
+                            @{ name = "🌍 Public IP"; value = "`\`\`${{ env.PUBLIC_IP}}\`\``"; inline = $true },
+                            @{ name = "📍 RDP Location"; value = "`\`\`${{ env.RDP_LOCATION}}\`\``"; inline = $true },
+                            @{ name = "🔗 Tailscale Connect Guide"; value = "1. Install [Tailscale](https://tailscale.com/download).\n2. Login with the same account as your auth key.\n3. Ping `${{ env.TAILSCALE_IP}}` to confirm connection.\n4. Connect with an RDP client to `${{ env.TAILSCALE_IP}}` using the provided credentials." }
+                        )
+                        footer = @{
+                            text = "RDP Made by Vayvy | Workflow ID: ${{ github.run_id }}"
+                            icon_url = "https://i.imgur.com/your_vayvy_logo.png" # Replace with a cool Vayvy logo
+                        }
+                        timestamp = "$(Get-Date -Format 'yyyy-MM-ddTHH:mm:ssZ')"
+                    }
                 )
-                footer = @{ text = "GalaxyRDP • Run ID $env:GITHUB_RUN_ID" }
-                timestamp = (Get-Date).ToString("o")
-              }
-            )
-          } | ConvertTo-Json -Depth 6
-
-          # DO NOT CHANGE THE WEBHOOK (user requested)
-          $webhook = "https://discord.com/api/webhooks/1420855927409737981/Lwex2weTGgSY6ZuM6NEZDsD3NMMpYakcMB1UC_PWEAITClQLmNmildPaPWOipM1MYAmu"
-
-          try {
-            Invoke-RestMethod -Uri $webhook -Method Post -ContentType "application/json" -Body $embed -ErrorAction Stop
-            Write-Host "✅ Discord notification sent." -ForegroundColor Yellow
-          } catch {
-            Write-Host "❌ Failed to send Discord notification: $_" -ForegroundColor Red
-          }
-
-          Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
-          Write-Host ""
-
-      # -------------------------------------------------------------------------
-      # STEP 14 - Emulator Crash Monitor + optional webhook (report only)
-      # -------------------------------------------------------------------------
-      - name: 🛡️ Emulator Crash Monitor + Optional Webhook (STEP 14)
-        if: always()
-        shell: pwsh
-        continue-on-error: true
-        run: |
-          Write-Host ""
-          Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
-          Write-Host "🛡️ [STEP 14] Emulator Crash Monitor (report-only)" -ForegroundColor Green
-          Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
-
-          $adb = $env:ADB_PATH
-          $emuDetected = $false
-          try {
-            if (Test-Path $adb) {
-              $devices = & $adb devices 2>$null
-              if ($devices -match "device") { $emuDetected = $true }
-            } else {
-              Write-Host "⚠️ ADB not present; cannot probe devices." -ForegroundColor Yellow
-            }
-          } catch {
-            Write-Host "⚠️ ADB probe error: $_" -ForegroundColor Yellow
-          }
-
-          if (-not $emuDetected) {
-            Write-Host "❗ Emulator/device NOT detected — sending alert (report-only)..." -ForegroundColor Red
-            $msg = @{
-              username = "GalaxyRDP Bot"
-              content = "⚠️ Emulator or ADB device not detected on runner **$env:GITHUB_RUN_ID** (triggered by **$env:GITHUB_ACTOR**)."
-            } | ConvertTo-Json
+            } | ConvertTo-Json -Depth 4
 
             try {
-              Invoke-RestMethod -Uri $webhook -Method Post -ContentType "application/json" -Body $msg -ErrorAction Stop
-              Write-Host "✅ Crash report sent to Discord." -ForegroundColor Yellow
+                Invoke-RestMethod -Uri "${{ env.DISCORD_WEBHOOK }}" -Method Post -ContentType "application/json" -Body $jsonBody
+                Write-Host "✅ RDP Ready notification sent to Discord."
             } catch {
-              Write-Host "⚠️ Failed to send crash report: $_" -ForegroundColor Yellow
+                Write-Warning "⚠️ Failed to send Discord RDP Ready notification: $($_.Exception.Message)"
+                echo "Failed to send RDP Ready Discord notification." | Out-File -FilePath discord_error.txt
             }
           } else {
-            Write-Host "✅ Emulator / device detected. No crash." -ForegroundColor Yellow
+            Write-Host "🚫 Discord notification for RDP Ready is disabled."
           }
 
-          Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
-          Write-Host ""
-
-      # -------------------------------------------------------------------------
-      # STEP 15 - Keep Alive 12h (live minute logs) + graceful cleanup
-      # -------------------------------------------------------------------------
-      - name: 🕒 Keep Alive 12h + Cleanup (STEP 15)
-        shell: pwsh
+      - name: 📊 Start RDP Monitoring and Keep Alive
         run: |
           Write-Host ""
-          Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
-          Write-Host "🕒 [STEP 15] Keep Alive 12h (live progress) + Cleanup" -ForegroundColor Green
-          Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
-
-          # Keep-alive loop (prints minute progress)
-          try {
-            $minutes = [int]$env:KEEP_ALIVE_MINUTES
-            for ($m = 1; $m -le $minutes; $m++) {
-              Write-Host "⏳ Minute ${m} / $minutes"
-              Start-Sleep -Seconds 60
-            }
-          } catch {
-            Write-Host "⚠️ Keep-alive loop interrupted: $_" -ForegroundColor Yellow
-          }
-
+          Write-Host "****************************************************************"
+          Write-Host "***               RDP READY FOR CONNECTION!                ***"
+          Write-Host "****************************************************************"
+          Write-Host "***        Your Vayvy RDP is now fully operational!        ***"
+          Write-Host "***                                                        ***"
+          Write-Host "***   Tailscale IP:   $env:TAILSCALE_IP"
+          Write-Host "***   Username:       $env:RDP_USERNAME"
+          Write-Host "***   Password:       $env:RDP_PASSWORD"
+          Write-Host "***                                                        ***"
+          Write-Host "***   Session Duration: $env:KEEP_ALIVE_MINUTES minutes    ***"
+          Write-Host "***   Cancel workflow on GitHub to terminate               ***"
+          Write-Host "****************************************************************"
+          Write-Host "***         System monitoring active on Discord            ***"
+          Write-Host "****************************************************************"
           Write-Host ""
-          Write-Host "🧹 Performing cleanup tasks..." -ForegroundColor Cyan
+          
+          $discordWebhook = "${{ env.DISCORD_WEBHOOK }}"
+          $runnerHostname = "$env:COMPUTERNAME"
+          $monitoringIntervalSeconds = 3600 # Every 1 hour
+          $crashThresholdCPU = 90 # % CPU
+          $crashThresholdRAM = 90 # % RAM usage
+          $lastCpuAlert = [DateTime]::MinValue
+          $lastRamAlert = [DateTime]::MinValue
+          $alertCooldownSeconds = 300 # 5 minutes cooldown for crash alerts
 
-          # Remove local user (try/catch)
-          try {
-            if (Get-LocalUser -Name "Vayvy" -ErrorAction SilentlyContinue) {
-              Remove-LocalUser -Name "Vayvy" -ErrorAction SilentlyContinue
-              Write-Host "🧾 Removed local user 'Vayvy'." -ForegroundColor Yellow
-            } else {
-              Write-Host "ℹ️ Local user 'Vayvy' not present." -ForegroundColor Cyan
-            }
-          } catch {
-            Write-Host "⚠️ Failed to remove user: $_" -ForegroundColor Yellow
+          function Send-DiscordMonitoringNotification {
+              param (
+                  [string]$title,
+                  [string]$description,
+                  [int]$color,
+                  [hashtable]$fields = @{},
+                  [string]$footerText = "Vayvy RDP Monitoring"
+              )
+              
+              $embedFields = @()
+              foreach ($key in $fields.Keys) {
+                  $embedFields += @{ name = $key; value = $fields[$key]; inline = $true }
+              }
+
+              $jsonBody = @{
+                  username = "Vayvy's RDP Monitor 📊"
+                  avatar_url = "https://i.imgur.com/your_monitor_avatar.png" # Replace with cool monitor bot avatar
+                  embeds = @(
+                      @{
+                          title = $title
+                          description = $description
+                          color = $color
+                          fields = $embedFields
+                          footer = @{
+                              text = "$footerText | Runner: $runnerHostname | Workflow: ${{ github.run_id }}"
+                              icon_url = "https://i.imgur.com/your_vayvy_logo.png"
+                          }
+                          timestamp = "$(Get-Date -Format 'yyyy-MM-ddTHH:mm:ssZ')"
+                      }
+                  )
+              } | ConvertTo-Json -Depth 4
+
+              try {
+                  Invoke-RestMethod -Uri $discordWebhook -Method Post -ContentType "application/json" -Body $jsonBody -TimeoutSec 30
+                  Write-Host "[$(Get-Date)] Discord monitoring notification sent: $title"
+              } catch {
+                  Write-Warning "[$(Get-Date)] ⚠️ Failed to send Discord monitoring notification: $($_.Exception.Message)"
+              }
           }
 
-          # Tailscale logout if present
-          try {
-            $tsExe = (Get-Command tailscale.exe -ErrorAction SilentlyContinue)?.Source
-            if ($tsExe) { & $tsExe logout -ErrorAction SilentlyContinue; Write-Host "🔒 Tailscale logged out." -ForegroundColor Yellow }
-          } catch {
-            Write-Host "⚠️ Tailscale logout failed: $_" -ForegroundColor Yellow
+          function Get-SystemMetrics {
+              $cpu = (Get-Counter '\Processor(_Total)\% Processor Time').CounterSamples.Where({ $_.InstanceName -eq '_total' }).CookedValue
+              $memory = Get-WmiObject -Class Win32_OperatingSystem
+              $totalMemoryMB = [math]::Round($memory.TotalPhysicalMemory / 1024)
+              $freeMemoryMB = [math]::Round($memory.FreePhysicalMemory / 1024)
+              $usedMemoryMB = $totalMemoryMB - $freeMemoryMB
+              $ramUsagePercent = [math]::Round(($usedMemoryMB / $totalMemoryMB) * 100, 2)
+              
+              [PSCustomObject]@{
+                  CPU = [math]::Round($cpu, 2)
+                  TotalRAM = $totalMemoryMB
+                  UsedRAM = $usedMemoryMB
+                  FreeRAM = $freeMemoryMB
+                  RAMUsagePercent = $ramUsagePercent
+              }
           }
 
-          # Stop RDP service (best-effort)
-          try {
-            Stop-Service -Name TermService -Force -ErrorAction SilentlyContinue
-            Write-Host "🛑 TermService stopped (best-effort)." -ForegroundColor Yellow
-          } catch {
-            Write-Host "⚠️ Stop TermService failed or not permitted: $_" -ForegroundColor Yellow
+          $monitoringStartTime = Get-Date
+          $lastHourlyCheck = Get-Date
+
+          while ($true) {
+              $currentMetrics = Get-SystemMetrics
+              $cpuLoad = $currentMetrics.CPU
+              $ramUsage = $currentMetrics.RAMUsagePercent
+              $currentTime = Get-Date
+
+              Write-Host "[$(Get-Date)] System Status - CPU: $($cpuLoad)% | RAM: $($ramUsage)% ($($currentMetrics.UsedRAM)MB / $($currentMetrics.TotalRAM)MB)"
+
+              # Hourly Monitoring
+              if (($currentTime - $lastHourlyCheck).TotalSeconds -ge $monitoringIntervalSeconds) {
+                  Send-DiscordMonitoringNotification -title "📊 Hourly RDP System Report" `
+                      -description "Just a quick check-in on your Vayvy RDP!" `
+                      -color 3447003 ` # Blue
+                      -fields @{
+                          "CPU Usage" = "$($cpuLoad)%";
+                          "RAM Usage" = "$($ramUsage)% ($($currentMetrics.UsedRAM)MB / $($currentMetrics.TotalRAM)MB)";
+                          "Time Active" = "$((New-TimeSpan -Start $monitoringStartTime -End $currentTime).ToString('hh\:mm\:ss'))";
+                          "Public IP" = "${{ env.PUBLIC_IP }}";
+                          "Tailscale IP" = "${{ env.TAILSCALE_IP }}"
+                      }
+                  $lastHourlyCheck = $currentTime
+              }
+
+              # Crash Prevention Monitoring (High CPU/RAM)
+              if ($cpuLoad -ge $crashThresholdCPU -and ($currentTime - $lastCpuAlert).TotalSeconds -ge $alertCooldownSeconds) {
+                  Send-DiscordMonitoringNotification -title "🚨 WARNING: High CPU Usage!" `
+                      -description "Your Vayvy RDP is experiencing high CPU load, potentially nearing a crash." `
+                      -color 16763904 ` # Orange
+                      -fields @{
+                          "Current CPU" = "$($cpuLoad)%";
+                          "Threshold" = "$($crashThresholdCPU)%";
+                          "Recommended Action" = "Check running applications on your RDP."
+                      }
+                  $lastCpuAlert = $currentTime
+              }
+
+              if ($ramUsage -ge $crashThresholdRAM -and ($currentTime - $lastRamAlert).TotalSeconds -ge $alertCooldownSeconds) {
+                  Send-DiscordMonitoringNotification -title "🚨 WARNING: High RAM Usage!" `
+                      -description "Your Vayvy RDP is consuming a lot of RAM, potentially leading to instability." `
+                      -color 16729344 ` # Red
+                      -fields @{
+                          "Current RAM Usage" = "$($ramUsage)% ($($currentMetrics.UsedRAM)MB / $($currentMetrics.TotalRAM)MB)";
+                          "Threshold" = "$($crashThresholdRAM)%";
+                          "Recommended Action" = "Close unnecessary applications or reduce memory-intensive tasks."
+                      }
+                  $lastRamAlert = $currentTime
+              }
+
+              Start-Sleep -Seconds 60 # Check every minute for alerts, hourly for full report
           }
+        env:
+          # Pass Discord webhook to this step, ensuring it's available for the script
+          DISCORD_WEBHOOK: ${{ env.DISCORD_WEBHOOK }}
+        # This step handles errors locally if Send-DiscordMonitoringNotification fails, but allows the main loop to continue.
 
-          Write-Host "✅ Cleanup finished." -ForegroundColor Green
-          Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
-          Write-Host ""
-
-      # -------------------------------------------------------------------------
-      # Final / Outtro banner
-      # -------------------------------------------------------------------------
-      - name: 🏁 Finish / Summary Banner
-        shell: pwsh
+      - name: ❌ Discord Webhook Notification - Workflow Failed
+        if: ${{ failure() && env.DISCORD_NOTIFY_ON_FINISH == 'True' }}
         run: |
-          Write-Host ""
-          Write-Host "════════════════════════════════════════════════════════════════════════" -ForegroundColor Cyan
-          Write-Host "🏁 GalaxyRDP Ultra - Run Complete (or kept alive for duration)" -ForegroundColor Green
-          Write-Host "Run ID: $env:GITHUB_RUN_ID  •  Actor: $env:GITHUB_ACTOR" -ForegroundColor Cyan
-          Write-Host "For details, check Actions run logs & Discord notification." -ForegroundColor Cyan
-          Write-Host "════════════════════════════════════════════════════════════════════════" -ForegroundColor Cyan
-          Write-Host ""
+          $discordWebhook = "${{ env.DISCORD_WEBHOOK }}"
+          $errorMessage = "An unexpected error occurred during the RDP setup. Please check the workflow logs for details."
+          $errorFile = "discord_error.txt"
+          if (Test-Path $errorFile) {
+              $errorMessage = Get-Content $errorFile -Raw
+          }
+
+          $jsonBody = @{
+              username = "Vayvy's RDP Bot 🤖"
+              avatar_url = "https://i.imgur.com/your_bot_avatar.png"
+              embeds = @(
+                  @{
+                      title = "❌ Vayvy's RDP Setup Failed!"
+                      description = "Uh oh! Something went wrong while setting up your Vayvy RDP. Please review the logs to diagnose the issue."
+                      color = 16711680 # Red color
+                      fields = @(
+                          @{ name = "Workflow ID"; value = "`\`\`${{ github.run_id}}\`\``"; inline = $true },
+                          @{ name = "Error Details"; value = "`\`\`\`$errorMessage\`\`\`\`" }
+                      )
+                      footer = @{
+                          text = "Vayvy RDP Error | Check GitHub Actions logs"
+                          icon_url = "https://i.imgur.com/your_vayvy_logo.png"
+                      }
+                      timestamp = "$(Get-Date -Format 'yyyy-MM-ddTHH:mm:ssZ')"
+                  }
+              )
+          } | ConvertTo-Json -Depth 4
+
+          try {
+              Invoke-RestMethod -Uri $discordWebhook -Method Post -ContentType "application/json" -Body $jsonBody
+              Write-Host "✅ Error notification sent to Discord."
+          } catch {
+              Write-Warning "⚠️ Failed to send Discord error notification: $($_.Exception.Message)"
+          }

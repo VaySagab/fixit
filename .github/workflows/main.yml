@@ -369,7 +369,6 @@ jobs:
               Write-Host "🌈 Step: Sending Beautifully Decorated RDP Ready Notification..."
 
               $fields = @(
-              $fields = @(
                   @{ name = "👑 RDP Username"; value = "``$($env:RDP_USERNAME)``"; inline = $true },
                   @{ name = "🔑 RDP Password"; value = "``$($env:RDP_PASSWORD)``"; inline = $true },
                   @{ name = "🌐 Tailscale IP"; value = "``$($env:TAILSCALE_IP)``"; inline = $true },

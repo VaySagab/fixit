@@ -189,59 +189,28 @@ jobs:
           }
           Write-Host "✅ TCP Connectivity to RDP Port 3389 (via Tailscale) Successful!"
 
-      - name: 🖼️ Set Desktop Background with Watermark (Vayvy's Signature)
+      - name: 🖼️ Set Custom Desktop Background (Vayvy's Style)
         run: |
-          Write-Host "➡️ Step: Applying Custom Desktop Background with Vayvy Watermark..."
-          $script = @'
-          # PowerShell script to set desktop background with watermark
-          $watermarkText = "$env:RDP_WM_TEXT"
-          $imagePath = "$env:TEMP\Vayvy_RDP_Background.bmp"
+          Write-Host ""
+          Write-Host "🌌✨=================================================✨🌌"
+          Write-Host "        💎 Vayvy's RDP - Your Dream Workspace 💎      "
+          Write-Host "   🌈 Background applied with a touch of elegance 🌈   "
+          Write-Host "         🚀 Made for smooth & premium vibes 🚀         "
+          Write-Host "🌌✨=================================================✨🌌"
+          Write-Host ""
 
-          # Create a blank image to draw on (e.g., 1920x1080)
-          $width = 1920
-          $height = 1080
+          $bgUrl = "https://ibb.co.com/bjPyfp8x" 
+          $bgPath = "$env:TEMP\Vayvy_RDP_Background.jpg"
 
-          Add-Type -AssemblyName System.Drawing
-          $bmp = New-Object System.Drawing.Bitmap($width, $height)
-          $graphics = [System.Drawing.Graphics]::FromImage($bmp)
-          
-          # Fill with a solid color (e.g., dark blue)
-          $graphics.FillRectangle([System.Drawing.Brushes]::DarkSlateGray, 0, 0, $width, $height)
+          Invoke-WebRequest -Uri $bgUrl -OutFile $bgPath -UseBasicParsing
 
-          # Set font and color for watermark
-          $font = New-Object System.Drawing.Font("Arial", 48, [System.Drawing.FontStyle]::Bold)
-          $brush = New-Object System.Drawing.SolidBrush([System.Drawing.Color]::FromArgb(100, 255, 255, 255)) # Semi-transparent white
-          
-          # Measure string for centering/positioning
-          $stringSize = $graphics.MeasureString($watermarkText, $font)
-          
-          # Draw watermark multiple times diagonally for "unremovable" effect
-          for ($x = -500; $x -lt $width + 500; $x += 400) {
-              for ($y = -200; $y -lt $height + 200; $y += 300) {
-                  $graphics.TranslateTransform($x, $y)
-                  $graphics.RotateTransform(-25) # Rotate for diagonal effect
-                  $graphics.DrawString($watermarkText, $font, $brush, 0, 0)
-                  $graphics.ResetTransform()
-              }
-          }
-
-          $graphics.Dispose()
-          
-          # Save the image as BMP (better compatibility for desktop background)
-          $bmp.Save($imagePath, [System.Drawing.Imaging.ImageFormat]::Bmp)
-          $bmp.Dispose()
-
-          # Set the desktop background
-          Set-ItemProperty -Path "HKCU:\Control Panel\Desktop" -Name WallPaper -Value $imagePath -Force
+          # Set as wallpaper
+          Set-ItemProperty -Path "HKCU:\Control Panel\Desktop" -Name WallPaper -Value $bgPath -Force
           Set-ItemProperty -Path "HKCU:\Control Panel\Desktop" -Name TileWallpaper -Value 0 -Force # Center
-          Set-ItemProperty -Path "HKCU:\Control Panel\Desktop" -Name WallpaperStyle -Value 2 -Force # Stretch/Fill
-          
-          # Update desktop
+          Set-ItemProperty -Path "HKCU:\Control Panel\Desktop" -Name WallpaperStyle -Value 2 -Force # Fill
+
           RUNDLL32.EXE user32.dll,UpdatePerUserSystemParameters 1, True
-          '@
-          $script | Out-File -FilePath "$env:TEMP\SetWallpaper.ps1"
-          powershell -File "$env:TEMP\SetWallpaper.ps1" -ExecutionPolicy Bypass
-          Write-Host "✅ Watermark Background Applied Successfully. (This might not be visible in headless runners but will be on RDP login)."
+          Write-Host "✅ Custom Wallpaper Applied Successfully!"
 
       - name: 🎮 Install MuMu Player 5 (Vayvy's Gaming Touch)
         if: env.RDP_INSTALL_MUMU == 'True'

@@ -125,10 +125,6 @@ jobs:
           Set-ItemProperty -Path 'HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services' -Name "fEnforceClientDesktopComposition" -Value 0 -Force
           Set-ItemProperty -Path 'HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services' -Name "fAllowUnsafeRemoteConnections" -Value 1 -Force
           
-          # Force High Performance plan (auto-detect GUID)
-          $highPerf = (powercfg -list | Select-String "High performance").ToString().Split()[3]
-          powercfg -setactive $highPerf
-          
           # RDP tweaks
           Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -Name "MaxLossyCompression" -Value 2 -Force
           Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -Name "MaxBMPCacheSize" -Value 65536 -Force
@@ -508,7 +504,7 @@ jobs:
                           @{ name = "Error Details"; value = "```$errorMessage```" }
                       )
                       footer = @{
-                          text = "Vayvy RDP Error - Check GitHub Actions logs"
+                          text = 'Vayvy RDP Error - Check GitHub Actions logs'
                           icon_url = "https://i.imgur.com/your_vayvy_logo.png"
                       }
                       timestamp = "$(Get-Date -Format 'yyyy-MM-ddTHH:mm:ssZ')"

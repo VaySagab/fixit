@@ -534,40 +534,41 @@ jobs:
         if: ${{ failure() && env.DISCORD_NOTIFY_ON_FINISH == 'True' }}
         run: |
           $discordWebhook = "${{ env.DISCORD_WEBHOOK }}"
-          $errorMessage = "An unexpected error occurred during the RDP setup. Please check the workflow logs for details."
-          $errorFile = "discord_error.txt"
+          $errorMessage   = "An unexpected error occurred during the RDP setup. Please check the workflow logs for details."
+          $errorFile      = "discord_error.txt"
+
           if (Test-Path $errorFile) {
               $errorMessage = Get-Content $errorFile -Raw
           }
 
           $jsonBody = @{
-              username = "Vayvy's RDP Bot 🤖"
+              username   = "Vayvy's RDP Bot 🤖"
               avatar_url = "https://i.imgur.com/your_bot_avatar.png"
-              embeds = @(
+              embeds     = @(
                   @{
-                      title = "❌ Vayvy's RDP Setup Failed!"
+                      title       = "❌ Vayvy's RDP Setup Failed!"
                       description = "Uh oh! Something went wrong while setting up your Vayvy RDP. Please review the logs to diagnose the issue."
-                      color = 16711680
-                      fields = @(
+                      color       = 16711680
+                      fields      = @(
                           @{
-                              name  = "Workflow ID"
-                              value = "${{ github.run_id }}"
+                              name   = "Workflow ID"
+                              value  = "${{ github.run_id }}"
                               inline = $true
                           },
                           @{
-                              name  = "Error Details"
-                              value = ("```" + $errorMessage + "```")
+                              name   = "Error Details"
+                              value  = '```$errorMessage```'
                               inline = $false
                           }
                       )
-                      footer = @{
-                          text = 'Vayvy RDP Error - Check GitHub Actions logs'
+                      footer      = @{
+                          text     = "Vayvy RDP Error - Check GitHub Actions logs"
                           icon_url = "https://i.imgur.com/your_vayvy_logo.png"
                       }
-                      timestamp = "$(Get-Date -Format 'yyyy-MM-ddTHH:mm:ssZ')"
+                      timestamp   = "$(Get-Date -Format 'yyyy-MM-ddTHH:mm:ssZ')"
                   }
               )
-          } | ConvertTo-Json -Depth 4
+          } | ConvertTo-Json -Depth 4 -Compress
 
           try {
               Invoke-RestMethod -Uri $discordWebhook -Method Post -ContentType "application/json" -Body $jsonBody

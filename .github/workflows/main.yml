@@ -127,6 +127,7 @@ jobs:
         Write-Host "| Security Layer | RDP Protocol (0) | ⚠️ Uses Legacy Security Negotiation |"
         Write-Host "| Firewall Rule | Allow TCP 3389 | ✅ Tailscale Tunnel Ready |"
         Write-Host "====================================================`n"
+        
 
     - name: 🔒 Create Custom Secure RDP User (Vayvy's Touch)
       run: |
@@ -187,6 +188,29 @@ jobs:
         $regPathRdpTcp = 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp'
         Write-Host "   -> Adjusting display settings for performance..."
         Set-ItemProperty -Path $regPathRdpTcp -Name "ColorDepth" -Type DWord -Value 2 -Force # 15-bit color depth (Performance)
+
+        # --- TAMBAHAN: Tweaks Visual untuk Performa Agresif ---
+        $regPathPerformance = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\RemoteDesktop\RDP\Client\Visuals'
+        New-Item -Path $regPathPerformance -Force | Out-Null
+    
+        Set-ItemProperty -Path $regPathPerformance -Name "SmoothScroll" -Type DWord -Value 0 -Force # Matikan smooth scrolling
+        Set-ItemProperty -Path $regPathPerformance -Name "DesktopBackground" -Type DWord -Value 0 -Force # Matikan wallpaper
+        Set-ItemProperty -Path $regPathPerformance -Name "MenuAnimation" -Type DWord -Value 0 -Force # Matikan animasi menu
+        Set-ItemProperty -Path $regPathPerformance -Name "WindowContents" -Type DWord -Value 0 -Force # Jangan tampilkan isi jendela saat digeser
+        Set-ItemProperty -Path $regPathPerformance -Name "FontSmoothing" -Type DWord -Value 0 -Force # Matikan perataan font
+
+        Write-Host " ✅ Optimasi RDP agresif selesai. Tampilan sekarang disetel untuk performa maksimal."
+        
+        Set-ItemProperty -Path 'HKCU:\Control Panel\Desktop' -Name "TileWallPaper" -Type String -Value "0" -Force
+        Set-ItemProperty -Path 'HKCU:\Control Panel\Desktop' -Name "Wallpaper" -Type String -Value "" -Force
+    
+        Set-ItemProperty -Path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\VisualEffects' -Name "VisualFXSetting" -Type DWord -Value 2 -Force
+    
+        $regPathExplorer = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced'
+        Set-ItemProperty -Path $regPathExplorer -Name "IconsOnly" -Type DWord -Value 1 -Force
+        Set-ItemProperty -Path $regPathExplorer -Name "ShowSyncInfo" -Type DWord -Value 0 -Force
+
+        Write-Host " ✅ Optimasi File Explorer selesai. Desktop akan lebih ringan."
         
         Write-Host " ✅ Performance optimization steps completed. System will utilize available acceleration."
 

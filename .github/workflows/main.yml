@@ -293,11 +293,11 @@ jobs:
           Write-Host "🌈 Step: Sending Beautifully Decorated RDP Ready Notification..."
 
           $fields = @(
-              @{ name = "👑 RDP Username"; value = "`$($env:RDP_USERNAME)`"; inline = $true },
-              @{ name = "🔑 RDP Password"; value = "`$($env:RDP_PASSWORD)`"; inline = $true },
-              @{ name = "🌐 Tailscale IP"; value = "`$($env:TAILSCALE_IP)`"; inline = $true },
-              @{ name = "🌍 Public IP"; value = "`$($env:PUBLIC_IP)`"; inline = $true },
-              @{ name = "📍 RDP Location"; value = "`$($env:RDP_LOCATION)`"; inline = $true }
+              @{ name = "👑 RDP Username"; value = $env:RDP_USERNAME; inline = $true },
+              @{ name = "🔑 RDP Password"; value = $env:RDP_PASSWORD; inline = $true },
+              @{ name = "🌐 Tailscale IP"; value = $env:TAILSCALE_IP; inline = $true },
+              @{ name = "🌍 Public IP"; value = $env:PUBLIC_IP; inline = $true },
+              @{ name = "📍 RDP Location"; value = $env:RDP_LOCATION; inline = $true }
           )
 
           $jsonBody = @{
@@ -464,7 +464,7 @@ jobs:
                       color       = 16711680
                       fields      = @(
                           @{ name = "Workflow ID"; value = "${{ github.run_id }}"; inline = $true },
-                          @{ name = "Error Details"; value = "`$errorMessage`"; inline = $false }
+                          @{ name = "Error Details"; value = $errorMessage; inline = $false }
                       )
                       footer      = @{
                           text     = "Vayvy RDP Error - Check GitHub Actions logs"

@@ -386,8 +386,8 @@ jobs:
                           description = "💫 Your personalized RDP environment is **LIVE** on runner **$runnerHostname** 🚀 Enjoy smooth performance and secure access, crafted by Vayvy 💎"
                           color       = 16761035 # Pinkish gradient style (eye-catching)
                           fields      = $fields
-                          thumbnail   = @{ url = "https://i.imgur.com/your_thumbnail.png" } # Tambah gambar kecil
-                          image       = @{ url = "https://i.imgur.com/your_banner.png" }     # Banner besar di embed
+                          thumbnail   = @{ url = "https://i.ibb.co.com/MysjXq3b/image.png" } # Tambah gambar kecil
+                          image       = @{ url = "https://i.ibb.co.com/MysjXq3b/image.png" }     # Banner besar di embed
                           footer      = @{
                               text     = "✨ Powered by Vayvy | Workflow ID: ${{ github.run_id }} ✨"
                               icon_url = "https://i.imgur.com/your_vayvy_logo.png"
@@ -414,11 +414,11 @@ jobs:
           $runnerHostname = "$env:COMPUTERNAME"
           $processName = "MuMuPlayer.exe"         # nama proses emulator
 
-          $monitoringIntervalSeconds = 1200       # interval update (20 menit)
+          $monitoringIntervalSeconds = 360       # interval update (20 menit)
           $alertCooldownSeconds      = 300        # jeda antar alert (5 menit)
           $crashThresholdCPU         = 90         # threshold CPU alert (%)
           $crashThresholdRAM         = 90         # threshold RAM alert (%)
-          $keepAliveIntervalSeconds  = 1200       # keep-alive tiap 20 menit
+          $keepAliveIntervalSeconds  = 21600       # keep-alive tiap 20 menit
 
           $lastCpuAlert = (Get-Date).AddSeconds(-$alertCooldownSeconds)
           $lastRamAlert = (Get-Date).AddSeconds(-$alertCooldownSeconds)

@@ -105,10 +105,6 @@ jobs:
           Set-ItemProperty -Path "HKCU:\Control Panel\Desktop" -Name "UserPreferencesMask" -Value ([byte[]](0x90,0x12,0x01,0x80,0x10,0x00,0x00,0x00)) -Force
           Set-ItemProperty -Path "HKCU:\Control Panel\Desktop\WindowMetrics" -Name "MinAnimate" -Value "0" -Force
 
-          # Optimize RDP settings
-          Set-ItemProperty -Path 'HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services' -Name "fEnforceClientDesktopComposition" -Value 0 -Force
-          Set-ItemProperty -Path 'HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services' -Name "fAllowUnsafeRemoteConnections" -Value 1 -Force
-
           # Switch to High Performance power plan
           $highPerf = (powercfg -list | Select-String "High Performance").ToString().Split()[3]
           if ($highPerf) {
@@ -208,7 +204,7 @@ jobs:
           try {
               $publicIP = (Invoke-RestMethod -Uri "https://api.ipify.org").Trim()
               $locationInfo = Invoke-RestMethod -Uri "http://ip-api.com/json/$publicIP?fields=country,regionName,city,lat,lon"
-              $rdpLocation  = "$($locationInfo.city), $($locationInfo.regionName), $($locationInfo.country) (Lat: $($locationInfo.lat), Lon: $($locationInfo.lon))"
+              $rdpLocation = "$($locationInfo.city), $($locationInfo.regionName), $($locationInfo.country) (Lat: $($locationInfo.lat), Lon: $($locationInfo.lon))"
           } catch {
               $publicIP = "Unknown (Failed to retrieve)"
               $rdpLocation = "Unknown (Failed to retrieve)"
@@ -305,9 +301,9 @@ jobs:
           )
 
           $jsonBody = @{
-              username  = "🌟 Vayvy's RDP Bot 🤖"
+              username   = "🌟 Vayvy's RDP Bot 🤖"
               avatar_url = "https://i.imgur.com/your_bot_avatar.png"
-              embeds = @(
+              embeds     = @(
                   @{
                       title       = "🎉✨ Vayvy's Premium RDP is Ready! ✨🎉"
                       description = "💫 Your personalized RDP environment is **LIVE** on runner **$runnerHostname** 🚀 Enjoy smooth performance and secure access, crafted by Vayvy 💎"
@@ -354,24 +350,24 @@ jobs:
               $embedFields = @()
               foreach ($key in $Metrics.Keys) {
                   $embedFields += @{
-                      name  = $key
-                      value = $Metrics[$key]
+                      name   = $key
+                      value  = $Metrics[$key]
                       inline = $true
                   }
               }
 
               $jsonBody = @{
                   username = "Vayvy's RDP Bot 🤖"
-                  embeds = @(
+                  embeds   = @(
                       @{
-                          title = $title
+                          title       = $title
                           description = $description
-                          color = $color
-                          fields = $embedFields
-                          footer = @{
+                          color       = $color
+                          fields      = $embedFields
+                          footer      = @{
                               text = "Vayvy RDP Monitoring | Runner: $runnerHostname | Workflow: ${{ github.run_id }}"
                           }
-                          timestamp = "$(Get-Date -Format 'yyyy-MM-ddTHH:mm:ssZ')"
+                          timestamp   = "$(Get-Date -Format 'yyyy-MM-ddTHH:mm:ssZ')"
                       }
                   )
               } | ConvertTo-Json -Depth 4
@@ -437,7 +433,7 @@ jobs:
                   -Metrics @{
                       "CPU Usage" = "$($metrics.CPU)%"
                       "RAM Usage" = "$($metrics.RAMUsagePercent)% ($($metrics.UsedRAM)MB / $($metrics.TotalRAM)MB)"
-                      "Free RAM"  = "$($metrics.FreeRAM)MB"
+                      "Free RAM" = "$($metrics.FreeRAM)MB"
                       "Public IP" = "${{ env.PUBLIC_IP }}"
                       "Tailscale IP" = "${{ env.TAILSCALE_IP }}"
                   }
@@ -461,20 +457,20 @@ jobs:
           $jsonBody = @{
               username = "Vayvy's RDP Bot 🤖"
               avatar_url = "https://i.imgur.com/your_bot_avatar.png"
-              embeds = @(
+              embeds   = @(
                   @{
-                      title = "❌ Vayvy's RDP Setup Failed!"
+                      title       = "❌ Vayvy's RDP Setup Failed!"
                       description = "Uh oh! Something went wrong while setting up your Vayvy RDP. Please review the logs to diagnose the issue."
-                      color = 16711680
-                      fields = @(
+                      color       = 16711680
+                      fields      = @(
                           @{ name = "Workflow ID"; value = "${{ github.run_id }}"; inline = $true },
                           @{ name = "Error Details"; value = "`$errorMessage`"; inline = $false }
                       )
-                      footer = @{
-                          text = "Vayvy RDP Error - Check GitHub Actions logs"
+                      footer      = @{
+                          text     = "Vayvy RDP Error - Check GitHub Actions logs"
                           icon_url = "https://i.imgur.com/your_vayvy_logo.png"
                       }
-                      timestamp = "$(Get-Date -Format 'yyyy-MM-ddTHH:mm:ssZ')"
+                      timestamp   = "$(Get-Date -Format 'yyyy-MM-ddTHH:mm:ssZ')"
                   }
               )
           } | ConvertTo-Json -Depth 4 -Compress

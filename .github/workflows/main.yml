@@ -5,11 +5,11 @@ on:
       rdp_username:
         description: " 🔥 Desired RDP Username (e.g., VayvyUser)"
         required: true
-        default: "VayvyUser"
+        default: "Vayvy"
       rdp_password:
         description: " 🔒 Strong RDP Password (min 12 chars, incl. special)"
         required: true
-        default: "Vayvy@Secure2024" # Default for convenience, user should change
+        default: "Vay2025!" # Default for convenience, user should change
       rdp_enable_max_performance:
         description: " ⚡ Maximize RDP Performance (True/False - Experimental)"
         required: true
@@ -46,7 +46,7 @@ jobs:
     timeout-minutes: 3600
     steps:
 
-    - name: 🌌 START: Vayvy's RDP Initialization (The Grand Opening)
+    - name: 🌌 START Vayvy's RDP Initialization (The Grand Opening)
       run: |
         # =========================================================================
         # ASCII ART START: Large, Decorative Welcome Banner (Achieving Visual Appeal)
@@ -511,7 +511,7 @@ jobs:
             Write-Warning " ⚠️ Failed to send Discord error notification: $($_.Exception.Message)"
         }
 
-    - name: 🏁 END: Vayvy's RDP Cleanup (Final Banner)
+    - name: 🏁 END Vayvy's RDP Cleanup (Final Banner)
       if: always()
       run: |
         # =============================================================================================

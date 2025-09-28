@@ -4,51 +4,36 @@ on:
   workflow_dispatch:
     inputs:
       rdp_username:
-        description: "🔥 Desired RDP Username (e.g., VayvyUser)"
+        description: "🔥 Desired RDP Username (e.g., Yanzz)"
         required: true
         default: "Vayvy"
-      rdp_password:
-        description: "🔒 Strong RDP Password (min 12 chars, incl. special)"
-        required: true
-        default: "Vay2025!"
-      rdp_enable_max_performance:
-        description: "⚡ Maximize RDP Performance (True/False)"
-        required: true
-        default: "True"
-      rdp_install_mumu:
-        description: "🎮 Install MuMu Player 5 (True/False)"
-        required: true
-        default: "True"
-      discord_notify_on_finish:
-        description: "🔔 Send Discord Notification on Completion (True/False)"
-        required: true
-        default: "True"
       discord_webhook_link:
         description: "🔧 Send Webhook Discord Link"
         required: true
         default: "https://discord.com/api/webhooks/1421078099763789845/u1bE8nK9wIBfMR1pii65HsQqb28BfcF65VMaLzurUGtIoaKeYg1Eb67gLG9aLdWCJ0MM"
+      rdp_install_mumu:
+        description: "🎮 Install MuMu Player 5 (True/False)"
+        required: true
+        default: "True"
 
 env:
   DISCORD_WEBHOOK: ${{ github.event.inputs.discord_webhook_link }}
-  KEEP_ALIVE_MINUTES: 720 # Runner will stay active for 12 hours
+  KEEP_ALIVE_MINUTES: 3600 # 60 hours
+  RDP_USERNAME: ${{ github.event.inputs.rdp_username }}
+  RDP_INSTALL_MUMU: ${{ github.event.inputs.rdp_install_mumu }}
+  RDP_WM_TEXT: "VayVy RDP - Made with 💖"
   EMULATOR_BOOT_WAIT_SECONDS: 90
   EMULATOR_POLL_RETRIES: 6
   DOWNLOAD_TRIES: 4
-  MIN_VALID_BYTES: 2000000 # Minimum expected size for MuMu installer
-  RDP_WM_TEXT: "VayVy RDP - Made with 💖"
-  RDP_USERNAME: ${{ github.event.inputs.rdp_username }}
-  RDP_PASSWORD: ${{ github.event.inputs.rdp_password }}
-  RDP_MAX_PERFORMANCE: ${{ github.event.inputs.rdp_enable_max_performance }}
-  RDP_INSTALL_MUMU: ${{ github.event.inputs.rdp_install_mumu }}
-  DISCORD_NOTIFY_ON_FINISH: ${{ github.event.inputs.discord_notify_on_finish }}
+  MIN_VALID_BYTES: 2000000
 
 jobs:
   secure-rdp:
     runs-on: windows-latest
-    timeout-minutes: 720
+    timeout-minutes: 3600
 
     steps:
-      - name: 🌟🚀 Vayvy's RDP Boot-up Sequence Initiated 🚀🌟
+      - name: 🌟🚀 RDP Boot-up Sequence Initiated 🚀🌟
         run: |
           Write-Host "🚀 Workflow started by: ${{ github.actor }}"
           Write-Host "⏰ Current UTC Time: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss UTC')"
@@ -59,118 +44,51 @@ jobs:
       - name: ⚙️ Configure Core RDP Settings
         run: |
           Write-Host "➡️ Step: Configuring Remote Desktop Services..."
-          # Enable Remote Desktop and disable Network Level Authentication
           Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -Name "fDenyTSConnections" -Value 0 -Force
           Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -Name "UserAuthentication" -Value 0 -Force
           Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -Name "SecurityLayer" -Value 0 -Force
-
-          # Remove existing rule to avoid duplication and add a new one for Tailscale
-          netsh advfirewall firewall delete rule name="RDP-Tailscale"
-          netsh advfirewall firewall add rule name="RDP-Tailscale" dir=in action=allow protocol=TCP localport=3389
-
-          # Restart the Remote Desktop service to apply changes
           Restart-Service -Name TermService -Force
           Write-Host "✅ RDP Core Settings Configured Successfully."
 
       - name: 🔒 Create RDP User with Secure Password
         run: |
           Write-Host "➡️ Step: Creating Secure RDP User Account..."
-          $rdpUser = "${{ env.RDP_USERNAME }}"
-          $rdpPass = "${{ env.RDP_PASSWORD }}"
+          Add-Type -AssemblyName System.Security
+          $charSet = @{
+              Upper   = [char[]](65..90)
+              Lower   = [char[]](97..122)
+              Number  = [char[]](48..57)
+          }
+          $rawPassword = @()
+          $rawPassword += $charSet.Upper | Get-Random -Count 1
+          $rawPassword += $charSet.Lower | Get-Random -Count 1
+          $rawPassword += $charSet.Number | Get-Random -Count 1
+          $password = -join ($rawPassword | Sort-Object { Get-Random })
+          $securePass = ConvertTo-SecureString $password -AsPlainText -Force
 
-          $securePass = ConvertTo-SecureString $rdpPass -AsPlainText -Force
-
-          if (Get-LocalUser -Name $rdpUser -ErrorAction SilentlyContinue) {
-              Write-Host "User '$rdpUser' exists. Updating password."
-              Set-LocalUser -Name $rdpUser -Password $securePass -AccountNeverExpires
+          if (Get-LocalUser -Name "${{ env.RDP_USERNAME }}" -ErrorAction SilentlyContinue) {
+              Write-Host "User '${{ env.RDP_USERNAME }}' exists. Updating password."
+              Set-LocalUser -Name "${{ env.RDP_USERNAME }}" -Password $securePass -AccountNeverExpires
           } else {
-              New-LocalUser -Name $rdpUser -Password $securePass -AccountNeverExpires
+              New-LocalUser -Name "${{ env.RDP_USERNAME }}" -Password $securePass -AccountNeverExpires
           }
 
-          Add-LocalGroupMember -Group "Administrators" -Member $rdpUser
-          Add-LocalGroupMember -Group "Remote Desktop Users" -Member $rdpUser
+          Add-LocalGroupMember -Group "Administrators" -Member "${{ env.RDP_USERNAME }}"
+          Add-LocalGroupMember -Group "Remote Desktop Users" -Member "${{ env.RDP_USERNAME }}"
           
-          # Pass credentials to the next steps as environment variables
-          echo "RDP_USERNAME=$rdpUser" >> $env:GITHUB_ENV
-          echo "RDP_PASSWORD=$rdpPass" >> $env:GITHUB_ENV
+          echo "RDP_PASSWORD=$password" >> $env:GITHUB_ENV
           
+          if (-not (Get-LocalUser -Name "${{ env.RDP_USERNAME }}")) {
+              Write-Error "User creation failed"
+              exit 1
+          }
           Write-Host "✅ RDP User Account Created and Configured."
-
-      - name: 🚀 Optimize RDP for Maximum Performance
-        if: env.RDP_MAX_PERFORMANCE == 'True'
-        run: |
-          Write-Host "➡️ Step: Applying Performance Optimizations for a Smooth RDP Experience..."
-
-          # Disable visual effects for performance
-          Set-ItemProperty -Path "HKCU:\Control Panel\Desktop" -Name "UserPreferencesMask" -Value ([byte[]](0x90,0x12,0x01,0x80,0x10,0x00,0x00,0x00)) -Force
-          Set-ItemProperty -Path "HKCU:\Control Panel\Desktop\WindowMetrics" -Name "MinAnimate" -Value "0" -Force
-
-          # Switch to High Performance power plan
-          $highPerf = (powercfg -list | Select-String "High Performance").ToString().Split()[3]
-          if ($highPerf) {
-              powercfg -setactive $highPerf
-              Write-Host "ℹ️ Set power plan to High Performance."
-          }
-
-          # RDP tweaks for better compression and caching
-          Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -Name "MaxLossyCompression" -Value 2 -Force
-          Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -Name "MaxBMPCacheSize" -Value 65536 -Force
-          Write-Host "✅ RDP Performance Optimizations Applied."
-
-      - name: 🧹 Vayvy's RDP Cleanup & Optimization
-        run: |
-          Write-Host ""
-          Write-Host "🌟🚀 Starting Vayvy's RDP Cleanup & Optimization Script 🚀🌟"
-          Write-Host "============================================================"
-
-          # Section 1: Remove Unnecessary Windows (UWP) Apps
-          Write-Host "➡️ Removing unnecessary Windows apps..."
-          $appsToRemove = @(
-              "Microsoft.ZuneVideo", "Microsoft.Windows.Photos", "Microsoft.BingWeather",
-              "Microsoft.3DBuilder", "Microsoft.OneConnect", "Microsoft.WindowsMaps",
-              "Microsoft.GetHelp", "Microsoft.Getstarted", "Microsoft.WindowsFeedbackHub",
-              "Microsoft.SkypeApp", "Microsoft.XboxApp", "Microsoft.XboxGameOverlay",
-              "Microsoft.XboxGamingOverlay", "Microsoft.XboxIdentityProvider",
-              "Microsoft.XboxSpeechToTextOverlay", "Microsoft.YourPhone",
-              "Microsoft.Advertising.Xaml"
-          )
-
-          foreach ($app in $appsToRemove) {
-              Write-Host "🗑️ Attempting to remove: $app..."
-              Get-AppxPackage -Name $app -AllUsers -ErrorAction SilentlyContinue | Remove-AppxPackage -ErrorAction SilentlyContinue
-              Get-AppxProvisionedPackage -Online | Where-Object DisplayName -eq $app | Remove-AppxProvisionedPackage -Online -ErrorAction SilentlyContinue
-              Write-Host "✅ Successfully processed $app."
-          }
-          Write-Host "✅ Finished removing unnecessary apps."
-          Write-Host "============================================================"
-
-          # Section 2: Stop Unnecessary Background Processes
-          Write-Host "➡️ Stopping unnecessary background processes..."
-          $processesToStop = @(
-              "OneCloud", "OneDrive", "Skype", "Teams", "RuntimeBroker",
-              "ApplicationFrameHost", "SearchIndexer"
-          )
-
-          foreach ($process in $processesToStop) {
-              Write-Host "⏹️ Attempting to stop process: $process..."
-              try {
-                  Stop-Process -Name $process -Force -ErrorAction Stop
-                  Write-Host "✅ Successfully stopped process $process."
-              } catch {
-                  Write-Host "ℹ️ Process $process not found or already stopped. Skipping..."
-              }
-          }
-          Write-Host "✅ Finished stopping unnecessary processes."
-          Write-Host "============================================================"
-
-          Write-Host "🎉 Cleanup & Optimization Complete!"
 
       - name: 🌐 Install Tailscale VPN
         run: |
           Write-Host "➡️ Step: Installing Tailscale VPN Client..."
           $tsUrl = "https://pkgs.tailscale.com/stable/tailscale-setup-1.82.0-amd64.msi"
           $installerPath = "$env:TEMP\tailscale.msi"
-          
           Invoke-WebRequest -Uri $tsUrl -OutFile $installerPath -TimeoutSec 300
           Start-Process msiexec.exe -ArgumentList "/i", "`"$installerPath`"", "/quiet", "/norestart" -Wait
           Remove-Item $installerPath -Force -ErrorAction SilentlyContinue
@@ -180,22 +98,23 @@ jobs:
         run: |
           Write-Host "➡️ Step: Connecting to Tailscale Network..."
           
-          # Bring up Tailscale with the provided auth key
-          & "$env:ProgramFiles\Tailscale\tailscale.exe" up --authkey=${{ secrets.TAILSCALE_AUTH_KEY }} --hostname=Vayvy-RDP-gh-${{ github.run_id }} --advertise-routes=0.0.0.0/0,::/0
+          # Bring up Tailscale with the provided auth key and set a unique hostname
+          & "$env:ProgramFiles\Tailscale\tailscale.exe" up --authkey=${{ secrets.TAILSCALE_AUTH_KEY }} --hostname=gh-runner-${{ github.run_id }}
           
+          # Wait for Tailscale to assign an IP
           $tsIP = $null
           $retries = 0
           while (-not $tsIP -and $retries -lt 15) {
               Write-Host "Attempting to get Tailscale IP (Retry: $($retries+1))..."
               $tsIP = (& "$env:ProgramFiles\Tailscale\tailscale.exe" ip -4).Trim()
               if (-not $tsIP) {
-                  Start-Sleep -Seconds 10
+                  Start-Sleep -Seconds 5
               }
               $retries++
           }
           
           if (-not $tsIP) {
-              Write-Error "Tailscale IP not assigned after multiple retries. Exiting."
+              Write-Error "Tailscale IP not assigned. Exiting."
               echo "Failed to get Tailscale IP." | Out-File -FilePath discord_error.txt
               exit 1
           }
@@ -204,7 +123,7 @@ jobs:
           try {
               $publicIP = (Invoke-RestMethod -Uri "https://api.ipify.org").Trim()
               $locationInfo = Invoke-RestMethod -Uri "http://ip-api.com/json/$publicIP?fields=country,regionName,city,lat,lon"
-              $rdpLocation = "$($locationInfo.city), $($locationInfo.regionName), $($locationInfo.country) (Lat: $($locationInfo.lat), Lon: $($locationInfo.lon))"
+              $rdpLocation = "$($locationInfo.city), $($locationInfo.regionName), $($locationInfo.country)"
           } catch {
               $publicIP = "Unknown (Failed to retrieve)"
               $rdpLocation = "Unknown (Failed to retrieve)"
@@ -221,31 +140,14 @@ jobs:
           Write-Host "➡️ Step: Verifying RDP Service Accessibility..."
           Write-Host "Tailscale IP: ${{ env.TAILSCALE_IP }}"
           
+          # Test connectivity using Test-NetConnection against the Tailscale IP on port 3389
           $testResult = Test-NetConnection -ComputerName ${{ env.TAILSCALE_IP }} -Port 3389 -ErrorAction SilentlyContinue
           if (-not $testResult.TcpTestSucceeded) {
-              Write-Error "TCP connection to RDP port 3389 failed via Tailscale IP."
+              Write-Error "TCP connection to RDP port 3389 failed"
               echo "RDP service not accessible via Tailscale IP." | Out-File -FilePath discord_error.txt
               exit 1
           }
-          Write-Host "✅ TCP Connectivity to RDP Port 3389 (via Tailscale) Successful!"
-
-      - name: 🖼️ Set Custom Desktop Background (Vayvy's Style)
-        run: |
-          Write-Host ""
-          Write-Host "🌌✨=================================================✨🌌"
-          Write-Host "       💎 Vayvy's RDP - Your Dream Workspace 💎       "
-          Write-Host "   🌈 Background applied with a touch of elegance 🌈   "
-          Write-Host "         🚀 Made for smooth & premium vibes 🚀         "
-          Write-Host "🌌✨=================================================✨🌌"
-          Write-Host ""
-          $bgUrl = "https://github.com/VaySagab/fixit/releases/download/file/image.png"
-          $bgPath = "$env:TEMP\Vayvy_RDP_Background.jpg"
-          Invoke-WebRequest -Uri $bgUrl -OutFile $bgPath -UseBasicParsing
-          Set-ItemProperty -Path "HKCU:\Control Panel\Desktop" -Name WallPaper -Value $bgPath -Force
-          Set-ItemProperty -Path "HKCU:\Control Panel\Desktop" -Name TileWallpaper -Value 0 -Force
-          Set-ItemProperty -Path "HKCU:\Control Panel\Desktop" -Name WallpaperStyle -Value 2 -Force
-          RUNDLL32.EXE user32.dll,UpdatePerUserSystemParameters 1, True
-          Write-Host "✅ Custom Wallpaper Applied Successfully!"
+          Write-Host "✅ TCP connectivity successful!"
 
       - name: 🎮 Download MuMu Player 5 (Vayvy's Gaming Touch)
         if: env.RDP_INSTALL_MUMU == 'True'
@@ -285,7 +187,6 @@ jobs:
           Write-Host "🎉 MuMu Player 5 has been downloaded successfully at: $installerPath"
 
       - name: 📢 Discord Webhook Notification - RDP Ready!
-        if: ${{ env.DISCORD_NOTIFY_ON_FINISH == 'True' }}
         run: |
           $discordWebhook = "${{ env.DISCORD_WEBHOOK }}"
           $runnerHostname = "$env:COMPUTERNAME"
@@ -444,7 +345,7 @@ jobs:
           DISCORD_WEBHOOK: ${{ env.DISCORD_WEBHOOK }}
 
       - name: ❌ Discord Webhook Notification - Workflow Failed
-        if: ${{ failure() && env.DISCORD_NOTIFY_ON_FINISH == 'True' }}
+        if: failure()
         run: |
           $discordWebhook = "${{ env.DISCORD_WEBHOOK }}"
           $errorMessage = "An unexpected error occurred during the RDP setup. Please check the workflow logs for details."

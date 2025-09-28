@@ -5,7 +5,7 @@ on:
       rdp_username:
         description: " 🔥 Desired RDP Username (e.g., VayvyUser)"
         required: true
-        default: "Vay"
+        default: "Vayvy"
       rdp_password:
         description: " 🔒 Strong RDP Password (min 12 chars, incl. special)"
         required: true
@@ -140,13 +140,17 @@ jobs:
             echo " ❌  User creation failed: Missing required input." | Out-File -FilePath discord_error.txt
             exit 1
         }
-
-        # Konversi input plaintext ke SecureString
+        
+        # --- FIX: Ensure System.Security is loaded to prevent ConvertTo-SecureString issues ---
         Add-Type -AssemblyName System.Security
+
+        # Konversi input plaintext ke SecureString.
+        # CATATAN PENTING: Password harus kompleks (huruf besar/kecil, angka, spesial)
         $securePass = ConvertTo-SecureString $password -AsPlainText -Force
 
-        # FIX: Removed unsupported '-Force' parameter from New-LocalUser
+        # FIX: Parameter '-Force' dihapus dari New-LocalUser
         New-LocalUser -Name $username -Password $securePass -AccountNeverExpires
+        
         Write-Host " -> User '$username' successfully created and set to never expire."
         
         # Tambahkan pengguna ke grup yang diperlukan
@@ -166,19 +170,23 @@ jobs:
         Write-Host " ⚡ Step: Applying RDP Optimization Settings (RemoteFX & UDP/TCP)..."
         
         # 1. Enable RDP Transfer Protocols (Use both UDP and TCP)
-        $regPath = 'HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services'
+        $regPathBase = 'HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services'
         Write-Host "   -> Setting RDP Transport (UDP/TCP)..."
-        Set-ItemProperty -Path $regPath -Name "fEnableRDPTransport" -Type DWord -Value 1 -Force
+        # Buat path dasar jika tidak ada
+        New-Item -Path $regPathBase -Force | Out-Null
+        Set-ItemProperty -Path $regPathBase -Name "fEnableRDPTransport" -Type DWord -Value 1 -Force
         
         # 2. Enable hardware graphics adapters for all Remote Desktop Services Sessions (RemoteFX)
-        $regPath = 'HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services\TSAppSrv\ApplicationCompatibility'
+        $regPathGraphics = 'HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services\TSAppSrv\ApplicationCompatibility'
         Write-Host "   -> Enabling RemoteFX/Hardware Acceleration (if available)..."
-        Set-ItemProperty -Path $regPath -Name "DisableRDPForcePnpWait" -Type DWord -Value 0 -Force
+        # FIX KRUSIAL: Buat path registri yang hilang sebelum menulis nilai
+        New-Item -Path $regPathGraphics -Force -Type Directory | Out-Null
+        Set-ItemProperty -Path $regPathGraphics -Name "DisableRDPForcePnpWait" -Type DWord -Value 0 -Force
         
         # 3. Optimize Visuals for Performance (Disable desktop composition, etc.)
-        $regPath = 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp'
+        $regPathRdpTcp = 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp'
         Write-Host "   -> Adjusting display settings for performance..."
-        Set-ItemProperty -Path $regPath -Name "ColorDepth" -Type DWord -Value 2 -Force # 15-bit color depth (Performance)
+        Set-ItemProperty -Path $regPathRdpTcp -Name "ColorDepth" -Type DWord -Value 2 -Force # 15-bit color depth (Performance)
         
         Write-Host " ✅ Performance optimization steps completed. System will utilize available acceleration."
 
@@ -276,7 +284,7 @@ jobs:
         }
         if (-not $downloadSuccess) {
             Write-Error "Failed to download MuMu Player after $maxRetries attempts."
-            echo " ❌  Failed to download MuMu Player. Check URL and connectivity." | Out-File -FilePath discord_error.txt
+            echo " ❌  Failed to download MuMu Player." | Out-File -FilePath discord_error.txt
             exit 1
         }
         Write-Host " 🎉  MuMu Player 5 has been downloaded successfully at: $installerPath (NOTE: Only downloaded, not installed per requirement)."

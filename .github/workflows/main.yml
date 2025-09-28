@@ -266,7 +266,7 @@ jobs:
               exit 1
           }
 
-          $publicIP = (Invoke-RestMethod -Uri "http://ipecho.net/plain").Trim()
+          $publicIP = (Invoke-RestMethod -Uri "api.ipify.org").Trim()
           if (-not $publicIP) {
               $publicIP = "Unknown (Failed to retrieve)"
           }

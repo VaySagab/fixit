@@ -5,11 +5,11 @@ on:
       rdp_username:
         description: " 🔥 Desired RDP Username (e.g., VayvyUser)"
         required: true
-        default: "Vayvy"
+        default: "VayvyUser"
       rdp_password:
         description: " 🔒 Strong RDP Password (min 12 chars, incl. special)"
         required: true
-        default: "Vay2025!" # Default for convenience, user should change
+        default: "Vayvy@Secure2024" # Default for convenience, user should change
       rdp_enable_max_performance:
         description: " ⚡ Maximize RDP Performance (True/False - Experimental)"
         required: true
@@ -46,7 +46,7 @@ jobs:
     timeout-minutes: 3600
     steps:
 
-    - name: 🌌 START Vayvy's RDP Initialization (The Grand Opening)
+    - name: 🌌 START: Vayvy's RDP Initialization (The Grand Opening)
       run: |
         # =========================================================================
         # ASCII ART START: Large, Decorative Welcome Banner (Achieving Visual Appeal)
@@ -350,6 +350,7 @@ jobs:
         $lastCpuAlert = (Get-Date).AddSeconds(-$alertCooldownSeconds)
         $lastRamAlert = (Get-Date).AddSeconds(-$alertCooldownSeconds)
 
+        # Fungsi yang menangani notifikasi Discord
         function Send-DiscordMonitoringNotification {
           param (
             [string]$title,
@@ -388,10 +389,9 @@ jobs:
           }
         }
 
+        # Fungsi yang mendapatkan metrik sistem
         function Get-SystemMetrics {
-          # Use Get-Counter for high accuracy CPU usage
           $cpu = (Get-Counter '\Processor(_Total)\% Processor Time').CounterSamples.CookedValue
-          # Use WMI for memory stats
           $memory = Get-WmiObject -Class Win32_OperatingSystem
           $totalMemoryMB = [math]::Round($memory.TotalVisibleMemorySize / 1024)
           $freeMemoryMB  = [math]::Round($memory.FreePhysicalMemory / 1024)
@@ -419,40 +419,55 @@ jobs:
           
           # 🚨 CPU Alert Logic (Crash Threshold)
           if ($cpuUsage -ge $crashThresholdCPU -and ($currentTime - $lastCpuAlert).TotalSeconds -ge $alertCooldownSeconds) {
-            Send-DiscordMonitoringNotification -title " 🚨 WARNING: CRITICAL CPU USAGE SPIKE!" `
-              -description "‼️ **URGENT:** Your Vayvy RDP CPU usage has hit **$($cpuUsage)%**. Immediate action recommended to prevent system instability or crash. ‼️" `
-              -color 16711680 ` # Red
-              -Metrics @{ 
+            # Menggunakan Splatting untuk pemanggilan fungsi yang stabil
+            $cpuAlertMetrics = @{ 
                 "Current CPU Usage" = "$($cpuUsage)%"
                 "Action Required"   = "Investigate high-load applications."
-              }
+            }
+            $cpuAlertParams = @{
+                title = " 🚨 WARNING: CRITICAL CPU USAGE SPIKE!"
+                description = "‼️ **URGENT:** Your Vayvy RDP CPU usage has hit **$($cpuUsage)%**. Immediate action recommended to prevent system instability or crash. ‼️"
+                color = 16711680 # Red
+                Metrics = $cpuAlertMetrics
+            }
+            Send-DiscordMonitoringNotification @cpuAlertParams
             $lastCpuAlert = $currentTime
           }
           
           # 🚨 RAM Alert Logic (Crash Threshold)
           if ($ramUsage -ge $crashThresholdRAM -and ($currentTime - $lastRamAlert).TotalSeconds -ge $alertCooldownSeconds) {
-            Send-DiscordMonitoringNotification -title " 🚨 WARNING: CRITICAL RAM USAGE!" `
-              -description "⚠️ **DANGER:** RAM usage is **$($ramUsage)%**. Close unnecessary processes to free up memory immediately. ⚠️" `
-              -color 16729344 ` # Orange
-              -Metrics @{ 
+            # Menggunakan Splatting untuk pemanggilan fungsi yang stabil
+            $ramAlertMetrics = @{ 
                 "Current RAM Usage" = "$($ramUsage)%"
                 "Used/Total"        = "$($metrics.UsedRAM)MB / $($metrics.TotalRAM)MB"
-              }
+            }
+            $ramAlertParams = @{
+                title = " 🚨 WARNING: CRITICAL RAM USAGE!"
+                description = "⚠️ **DANGER:** RAM usage is **$($ramUsage)%**. Close unnecessary processes to free up memory immediately. ⚠️"
+                color = 16729344 # Orange
+                Metrics = $ramAlertMetrics
+            }
+            Send-DiscordMonitoringNotification @ramAlertParams
             $lastRamAlert = $currentTime
           }
           
           # 📊 Periodic Status Update 
-          Send-DiscordMonitoringNotification -title " 📊 RDP System Status Update" `
-            -description "Here is the current performance snapshot of your optimized RDP. Everything running smoothly." `
-            -color 3447003 ` # Blue
-            -Metrics @{
+          # Menggunakan Splatting untuk pemanggilan fungsi yang stabil
+          $statusMetrics = @{
               "CPU Usage"      = "$($metrics.CPU)%"
               "RAM Usage"      = "$($metrics.RAMUsagePercent)%"
               "Free RAM"       = "$($metrics.FreeRAM)MB"
               "Public IP"      = "${{ env.PUBLIC_IP }}"
               "Tailscale IP"   = "${{ env.TAILSCALE_IP }}"
               "RDP Status"     = "Active & Monitored"
-            }
+          }
+          $statusParams = @{
+              title = " 📊 RDP System Status Update"
+              description = "Here is the current performance snapshot of your optimized RDP. Everything running smoothly."
+              color = 3447003 # Blue
+              Metrics = $statusMetrics
+          }
+          Send-DiscordMonitoringNotification @statusParams
           
           Write-Host " RDP Active - Keep Alive running for $env:KEEP_ALIVE_MINUTES minutes total."
           Start-Sleep -Seconds $monitoringIntervalSeconds
@@ -496,7 +511,7 @@ jobs:
             Write-Warning " ⚠️ Failed to send Discord error notification: $($_.Exception.Message)"
         }
 
-    - name: 🏁 END Vayvy's RDP Cleanup (Final Banner)
+    - name: 🏁 END: Vayvy's RDP Cleanup (Final Banner)
       if: always()
       run: |
         # =============================================================================================

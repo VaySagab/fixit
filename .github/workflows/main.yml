@@ -6,11 +6,11 @@ on:
       rdp_username:
         description: "🔥 Desired RDP Username (e.g., VayvyUser)"
         required: true
-        default: "VayvyUser"
+        default: "Vayvy"
       rdp_password:
         description: "🔒 Strong RDP Password (min 12 chars, incl. special)"
         required: true
-        default: "Vayvy@Secure2024" # Default for convenience, user should change
+        default: "Vay2025!" # Default for convenience, user should change
       rdp_enable_max_performance:
         description: "⚡ Maximize RDP Performance (True/False - Experimental)"
         required: true
@@ -23,9 +23,13 @@ on:
         description: "🔔 Send Discord Notification on Completion (True/False)"
         required: true
         default: "True"
+      discord_webhook_link:
+        description: "🔧 Send Webhook Discord Link"
+        required: true
+        default: "https://discord.com/api/webhooks/1421078099763789845/u1bE8nK9wIBfMR1pii65HsQqb28BfcF65VMaLzurUGtIoaKeYg1Eb67gLG9aLdWCJ0MM"
 
 env:
-  DISCORD_WEBHOOK: "https://discord.com/api/webhooks/1421078099763789845/u1bE8nK9wIBfMR1pii65HsQqb28BfcF65VMaLzurUGtIoaKeYg1Eb67gLG9aLdWCJ0MM"
+  DISCORD_WEBHOOK: ${{ github.event.inputs.discord_webhook_link }}
   KEEP_ALIVE_MINUTES: 720 # Runner will stay active for 12 hours
   EMULATOR_BOOT_WAIT_SECONDS: 90
   EMULATOR_POLL_RETRIES: 6
@@ -239,47 +243,54 @@ jobs:
 
       - name: 🔑 Establish Tailscale Connection & Get IP
         run: |
-          Write-Host "➡️ Step: Connecting to Tailscale Network..."
-          
-          # Bring up Tailscale with the provided auth key and set a unique hostname
-          # The hostname includes the workflow run ID for easy identification
-          & "$env:ProgramFiles\Tailscale\tailscale.exe" up --authkey=${{ secrets.TAILSCALE_AUTH_KEY }} --hostname=Vayvy-RDP-gh-${{ github.run_id }} --advertise-routes=0.0.0.0/0,::/0 # Advertise all routes for full access (use with caution)
-          
-          # Wait for Tailscale to assign an IP and provide public IP
-          $tsIP = $null
-          $publicIP = $null
-          $retries = 0
-          while (-not $tsIP -and $retries -lt 15) { # Increased retries
-              Write-Host "Attempting to get Tailscale IP (Retry: $($retries+1))..."
-              $tsIP = (& "$env:ProgramFiles\Tailscale\tailscale.exe" ip -4).Trim()
-              if ($tsIP) {
-                  Write-Host "Tailscale IP found: $tsIP"
-              } else {
-                  Start-Sleep -Seconds 10
-              }
-              $retries++
-          }
-          
-          if (-not $tsIP) {
-              Write-Error "Tailscale IP not assigned after multiple retries. Exiting."
-              echo "Failed to get Tailscale IP." | Out-File -FilePath discord_error.txt
-              exit 1
-          }
+         Write-Host "➡️ Step: Connecting to Tailscale Network..."
+        
+         # Bring up Tailscale with the provided auth key and set a unique hostname
+         & "$env:ProgramFiles\Tailscale\tailscale.exe" up --authkey=${{ secrets.TAILSCALE_AUTH_KEY }} --hostname=Vayvy-RDP-gh-${{ github.run_id }} --advertise-routes=0.0.0.0/0,::/0
+        
+         # Wait for Tailscale to assign an IP
+         $tsIP = $null
+         $retries = 0
+         while (-not $tsIP -and $retries -lt 15) {
+             Write-Host "Attempting to get Tailscale IP (Retry: $($retries+1))..."
+             $tsIP = (& "$env:ProgramFiles\Tailscale\tailscale.exe" ip -4).Trim()
+             if (-not $tsIP) {
+                 Start-Sleep -Seconds 10
+             }
+             $retries++
+         }
+        
+         if (-not $tsIP) {
+             Write-Error "Tailscale IP not assigned after multiple retries. Exiting."
+             echo "Failed to get Tailscale IP." | Out-File -FilePath discord_error.txt
+             exit 1
+         }
 
-          $publicIP = (Invoke-RestMethod -Uri "api.ipify.org").Trim()
-          if (-not $publicIP) {
-              $publicIP = "Unknown (Failed to retrieve)"
-          }
+         # Get Public IP
+         try {
+             $publicIP = (Invoke-RestMethod -Uri "https://api.ipify.org").Trim()
+         } catch {
+             $publicIP = "Unknown (Failed to retrieve)"
+         }
 
-          # Get RDP Location (simplified, based on public IP location)
-          $locationInfo = Invoke-RestMethod -Uri "http://ip-api.com/json/$publicIP?fields=country,regionName,city,lat,lon"
-          $rdpLocation = "$($locationInfo.city), $($locationInfo.regionName), $($locationInfo.country) (Lat: $($locationInfo.lat), Lon: $($locationInfo.lon))"
+         # Get RDP Location (simplified, based on public IP location)
+         if ($publicIP -eq "Unknown (Failed to retrieve)") {
+             $rdpLocation = "Unknown (Failed to retrieve)"
+         } else {
+             try {
+                 $locationInfo = Invoke-RestMethod -Uri "http://ip-api.com/json/$publicIP?fields=country,regionName,city,lat,lon"
+                 $rdpLocation  = "$($locationInfo.city), $($locationInfo.regionName), $($locationInfo.country) (Lat: $($locationInfo.lat), Lon: $($locationInfo.lon))"
+             } catch {
+                 $rdpLocation = "Unknown (Failed to retrieve)"
+             }
+         }
 
-          echo "TAILSCALE_IP=$tsIP" >> $env:GITHUB_ENV
-          echo "PUBLIC_IP=$publicIP" >> $env:GITHUB_ENV
-          echo "RDP_LOCATION=$rdpLocation" >> $env:GITHUB_ENV
-          
-          Write-Host "✅ Tailscale Connected and IPs Retrieved."
+         # Export variables to GitHub ENV
+         echo "TAILSCALE_IP=$tsIP"        >> $env:GITHUB_ENV
+         echo "PUBLIC_IP=$publicIP"      >> $env:GITHUB_ENV
+         echo "RDP_LOCATION=$rdpLocation" >> $env:GITHUB_ENV
+
+         Write-Host "✅ Tailscale Connected and IPs Retrieved."
 
       - name: 🔍 Verify RDP Accessibility
         run: |

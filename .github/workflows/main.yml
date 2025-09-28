@@ -53,8 +53,8 @@ jobs:
         Write-Host "                                                                                             "
         Write-Host " ╔═════════════════════════════════════════════════════════════════════════════════════════╗"
         Write-Host " ║    ██╗   ██╗ █████╗ ██╗   ██╗ ██╗    ██╗ ██╗   ██╗ ██████╗ ███████╗ █████╗ ██╗  ██╗    ║"
-        Write-Host " ║    ██║   ██║██╔══██╗██║   ██║ ██║    ██║ ██║   ██║██╔════╝ ██╔════╝██╔══██╗██║ ██╔╝    ║"
-        Write-Host " ║    ██║   ██║███████║██║   ██║ ██║ █╗ ██║ ██║   ██║██║  ███╗█████╗  ███████║█████╗     ║"
+        Write-Host " ║    ██║   ██║██╔══██╗██║   ██║ ██║ █╗ ██║ ██║   ██║██╔════╝ ██╔════╝██╔══██╗██║ ██╔╝    ║"
+        Write-Host " ║    ██║   ██║███████║██║   ██║ ██║███╗██║ ██║   ██║██║  ███╗█████╗  ███████║█████╗     ║"
         Write-Host " ║    ╚██╗ ██╔╝██╔══██║██║   ██║ ██║███╗██║ ██║   ██║██║   ██║██╔══╝  ██╔══██║██╔═██╗    ║"
         Write-Host " ║     ╚████╔╝ ██║  ██║╚██████╔╝ ╚███╔███╔╝ ╚██████╔╝╚██████╔╝███████╗██║  ██║██║  ██╗   ║"
         Write-Host " ║      ╚═══╝  ╚═╝  ╚═╝ ╚═════╝   ╚══╝╚══╝   ╚═════╝  ╚═════╝ ╚══════╝╚═╝  ╚═╝╚═╝  ╚═╝   ║"
@@ -142,9 +142,11 @@ jobs:
         }
 
         # Konversi input plaintext ke SecureString
+        Add-Type -AssemblyName System.Security
         $securePass = ConvertTo-SecureString $password -AsPlainText -Force
 
-        New-LocalUser -Name $username -Password $securePass -AccountNeverExpires -Force
+        # FIX: Removed unsupported '-Force' parameter from New-LocalUser
+        New-LocalUser -Name $username -Password $securePass -AccountNeverExpires
         Write-Host " -> User '$username' successfully created and set to never expire."
         
         # Tambahkan pengguna ke grup yang diperlukan

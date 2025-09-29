@@ -278,7 +278,7 @@ jobs:
                     image       = @{ url = "https://bit.ly/4mHgcDE" }
                     author      = @{
                         name       = "Vayvy's RDP Service Status"
-                        icon_url = "https://bit.ly/4mHgcDE"
+                        icon_url = "https://bit.py/4mHgcDE"
                     }
                     footer      = @{
                         text       = " ✨ RDP Made by Vayvy | Workflow ID: ${{ github.run_id }} | Timezone: UTC "
@@ -314,6 +314,16 @@ jobs:
             [hashtable]$Metrics
           )
           
+          # Coba muat System.Windows.Forms dan System.Drawing di awal
+          try {
+              Add-Type -AssemblyName System.Windows.Forms
+              Add-Type -AssemblyName System.Drawing
+          } catch {
+              Write-Error "Gagal memuat pustaka Windows Forms dan Drawing. Pastikan lingkungan mendukungnya."
+              # Keluar dari fungsi jika pustaka utama tidak tersedia
+              return
+          }
+          
           # --- PERBAIKAN: COBA DUA CARA UNTUK AKTIFKAN JENDELA ---
           $shell = New-Object -ComObject WScript.Shell
           $activated = $false
@@ -341,15 +351,13 @@ jobs:
               }
           }
           
-          # --- PERBAIKAN: SOLUSI UNTUK 'Unable to find type' ---
+          # Jika gagal mengaktifkan, lakukan simulasi umum
           if (-not $activated) {
               Write-Warning "⚠️ Gagal mengaktifkan jendela MuMu. Menggunakan metode simulasi interaksi umum."
               try {
-                  # Solusi 1: Muat Assembly dan gunakan Cursor
-                  Add-Type -AssemblyName System.Windows.Forms
                   [System.Windows.Forms.Cursor]::Position = New-Object System.Drawing.Point(500, 500)
+                  $shell.SendKeys(" ")
               } catch {
-                  # Solusi 2: Gunakan WScript.Shell sebagai cadangan
                   Write-Warning "⚠️ Gagal memuat System.Windows.Forms. Menggunakan WScript.Shell sebagai gantinya."
                   $shell.SendKeys(" ")
               }
@@ -360,8 +368,9 @@ jobs:
           Write-Host " 📸 Capturing screenshot..."
           $filePath = "$env:TEMP\rdp_screen.png"
           $fileName = "rdp_screen.png"
-          Add-Type -AssemblyName System.Drawing
-          $bounds = [System.Drawing.Graphics]::FromHwnd((Get-DesktopWindowHandle)).VisibleClipBounds
+          
+          # PERBAIKAN: Kembali ke metode CopyFromScreen yang berfungsi
+          $bounds = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds
           $bitmap = New-Object System.Drawing.Bitmap $bounds.Width, $bounds.Height
           $graphics = [System.Drawing.Graphics]::FromImage($bitmap)
           $graphics.CopyFromScreen($bounds.Location, [System.Drawing.Point]::Empty, $bounds.Size)

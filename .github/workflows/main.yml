@@ -14,7 +14,7 @@ on:
         description: " ⚡ Maximize RDP Performance (True/False - Experimental)"
         required: true
         default: "True"
-      rdp_install_mumu:
+      rdp_download_mumu:
         description: " 🎮 Download MuMu Player 5 (True/False)"
         required: true
         default: "True"
@@ -30,7 +30,7 @@ on:
 env:
   DISCORD_WEBHOOK: ${{ github.event.inputs.discord_link_webhook }}
   KEEP_ALIVE_MINUTES: 720
-  EMULATOR_BOOT_WAIT_SECONDS: 90
+  EMULATOR_BOOT_WAIT_SECONDS: 120 # Nilai ini sekarang diabaikan
   EMULATOR_POLL_RETRIES: 6
   DOWNLOAD_TRIES: 4
   MIN_VALID_BYTES: 2000000
@@ -38,7 +38,7 @@ env:
   RDP_USER_INPUT: ${{ github.event.inputs.rdp_username }}
   RDP_PASS_INPUT: ${{ github.event.inputs.rdp_password }}
   RDP_MAX_PERFORMANCE: ${{ github.event.inputs.rdp_enable_max_performance }}
-  RDP_INSTALL_MUMU: ${{ github.event.inputs.rdp_install_mumu }}
+  RDP_DOWNLOAD_MUMU: ${{ github.event.inputs.rdp_download_mumu }}
   DISCORD_NOTIFY_ON_FINISH: ${{ github.event.inputs.discord_notify_on_finish }}
 
 jobs:
@@ -68,7 +68,7 @@ jobs:
         Write-Host "Configuration Parameters:"
         Write-Host " -> Keep Alive Duration: $env:KEEP_ALIVE_MINUTES Minutes"
         Write-Host " -> Max Performance Mode: $env:RDP_MAX_PERFORMANCE"
-        Write-Host " -> MuMu Player Download: $env:RDP_INSTALL_MUMU"
+        Write-Host " -> MuMu Player Download: $env:RDP_DOWNLOAD_MUMU"
         Write-Host "============================================================================================="
     
     - name: 🗺️ Geolocation dan Public IP Discovery
@@ -110,7 +110,6 @@ jobs:
         Write-Host "| Firewall Rule | Allow TCP 3389 | ✅ Tailscale Tunnel Ready |"
         Write-Host "====================================================`n"
         
-
     - name: 🔒 Create Custom Secure RDP User (Vayvy's Touch)
       run: |
         $username = "$env:RDP_USER_INPUT"
@@ -216,10 +215,10 @@ jobs:
         }
         Write-Host " 🎉 TCP connectivity successful! RDP is fully accessible."
 
-    - name: 🎮 Download MuMu Player 5 (Vayvy's Gaming Touch)
-      if: env.RDP_INSTALL_MUMU == 'True'
+    - name: 🎮 Download MuMu Player 5
+      if: env.RDP_DOWNLOAD_MUMU == 'True'
       run: |
-        Write-Host " ➡ ️ Step: Downloading MuMu Player 5..."
+        Write-Host " ➡ ️ Step: Downloading MuMu Player 5 installer only..."
         $mumuUrl = "https://github.com/VaySagab/fixit/releases/download/file/MuMu_5.0.4_pi0eurC.exe"
         $installerPath = "$env:TEMP\MuMu_5.0.4.exe"
         $maxRetries = [int]$env:DOWNLOAD_TRIES
@@ -231,7 +230,7 @@ jobs:
             Invoke-WebRequest -Uri $mumuUrl -OutFile $installerPath -TimeoutSec 300
             $fileSize = (Get-Item $installerPath).Length
             if ($fileSize -ge $minBytes) {
-              Write-Host " ✅  Download successful. File size: $fileSize bytes."
+              Write-Host " ✅ Download successful. File size: $fileSize bytes."
               $downloadSuccess = $true
               break
             } else {
@@ -249,14 +248,14 @@ jobs:
             echo " ❌  Failed to download MuMu Player." | Out-File -FilePath discord_error.txt
             exit 1
         }
-        Write-Host " 🎉  MuMu Player 5 has been downloaded successfully at: $installerPath (NOTE: Only downloaded, not installed per requirement)."
+        Write-Host " 🎉 MuMu Player 5 installer has been downloaded to: $installerPath"
 
     - name: 📢 Discord Webhook Notification - RDP Ready!
       if: success() && env.DISCORD_NOTIFY_ON_FINISH == 'True'
       run: |
         $discordWebhook = "${{ env.DISCORD_WEBHOOK }}"
         $runnerHostname = "$env:COMPUTERNAME"
-        Write-Host " 🌈  Step: Sending Beautifully Decorated RDP Ready Notification (Length target met: 150+ lines)..."
+        Write-Host " 🌈  Step: Sending Beautifully Decorated RDP Ready Notification..."
         $fields = @(
           @{ name = " 👑  RDP Username"; value = $env:RDP_USERNAME; inline = $true },
           @{ name = " 🔑  RDP Password"; value = $env:RDP_PASSWORD; inline = $true },
@@ -298,16 +297,6 @@ jobs:
 
     - name: 📊 Start RDP Monitoring and Keep Alive
       run: |
-        # --- PERBAIKAN UTAMA: Menjalankan Notepad di latar belakang ---
-        Write-Host " 📈 Starting Notepad in the background to force continuous display rendering..."
-        try {
-            Start-Process -FilePath "notepad.exe" -WindowStyle Hidden -PassThru | Out-Null
-            Write-Host " ✅ Notepad started successfully."
-        } catch {
-            Write-Warning " ⚠️ Failed to start Notepad. Screenshot might be a static image."
-        }
-        # --- END PERBAIKAN ---
-
         $discordWebhook = "${{ env.DISCORD_WEBHOOK }}"
         $runnerHostname = "$env:COMPUTERNAME"
         $monitoringIntervalSeconds = 300
@@ -316,7 +305,9 @@ jobs:
         $crashThresholdRAM = 90
         $lastCpuAlert = (Get-Date).AddSeconds(-$alertCooldownSeconds)
         $lastRamAlert = (Get-Date).AddSeconds(-$alertCooldownSeconds)
-        
+
+        # Tidak ada lagi jeda waktu untuk MuMu karena Anda akan menginstalnya secara manual
+
         function Send-DiscordMonitoringNotificationWithScreenshot {
           param (
             [string]$title,

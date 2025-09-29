@@ -314,7 +314,7 @@ jobs:
             [hashtable]$Metrics
           )
           
-          # Coba muat System.Windows.Forms dan System.Drawing di awal
+          # Coba muat pustaka yang dibutuhkan
           try {
               Add-Type -AssemblyName System.Windows.Forms
               Add-Type -AssemblyName System.Drawing
@@ -342,7 +342,7 @@ jobs:
           if (-not $activated) {
               Write-Host "⚠️ Jendela MuMu tidak ditemukan. Mencoba mencari proses..."
               $processName = "MuMuPlayer.exe" # Sesuaikan jika nama file berbeda
-              $muMuProcess = Get-Process -Name $processName -ErrorAction SilentlyContinue
+              $muMuProcess = Get-Process | Where-Object { $_.ProcessName -eq $processName }
               if ($muMuProcess) {
                   Write-Host "✅ Proses '$processName' ditemukan. Mencoba mengaktifkan jendela..."
                   $shell.AppActivate($muMuProcess.Id)
@@ -355,11 +355,9 @@ jobs:
           if (-not $activated) {
               Write-Warning "⚠️ Gagal mengaktifkan jendela MuMu. Menggunakan metode simulasi interaksi umum."
               try {
-                  [System.Windows.Forms.Cursor]::Position = New-Object System.Drawing.Point(500, 500)
                   $shell.SendKeys(" ")
               } catch {
-                  Write-Warning "⚠️ Gagal memuat System.Windows.Forms. Menggunakan WScript.Shell sebagai gantinya."
-                  $shell.SendKeys(" ")
+                  Write-Warning "⚠️ Gagal menggunakan WScript.Shell untuk simulasi keyboard."
               }
               Start-Sleep -Seconds 1
           }
@@ -481,68 +479,4 @@ jobs:
               "CPU Usage"      = "$($metrics.CPU)%"
               "RAM Usage"      = "$($metrics.RAMUsagePercent)%"
               "Free RAM"       = "$($metrics.FreeRAM)MB"
-              "Public IP"      = "${{ env.PUBLIC_IP }}"
-              "Tailscale IP"   = "${{ env.TAILSCALE_IP }}"
-              "RDP Status"     = "Active & Monitored"
-          }
-          $statusParams = @{
-              title = " 📊 RDP System Status Update"
-              description = "Here is the current performance snapshot of your optimized RDP. Everything running smoothly."
-              color = 3447003
-              Metrics = $statusMetrics
-          }
-          Send-DiscordMonitoringNotificationWithScreenshot @statusParams
-
-          Write-Host " RDP Active - Keep Alive running for $env:KEEP_ALIVE_MINUTES minutes total."
-          Start-Sleep -Seconds $monitoringIntervalSeconds
-        }
-        
-    - name: ❌ Discord Webhook Notification - Workflow Failed
-      if: failure()
-      run: |
-        $discordWebhook = "${{ env.DISCORD_WEBHOOK }}"
-        $errorMessage = "An unexpected error occurred during the RDP setup. Please check the workflow logs for details."
-        $errorFile = "discord_error.txt"
-        if (Test-Path $errorFile) {
-            $errorMessage = Get-Content $errorFile -Raw
-        }
-        $jsonBody = @{
-            username = "Vayvy's RDP Bot 🤖 "
-            avatar_url = "https://i.imgur.com/your_bot_avatar.png"
-            embeds   = @(
-                @{
-                    title       = " ❌ Vayvy's RDP Setup Failed!"
-                    description = "Uh oh! Something went wrong while setting up your Vayvy RDP. Please review the logs to diagnose the issue."
-                    color       = 16711680
-                    fields      = @(
-                        @{ name = "Workflow ID"; value = "${{ github.run_id }}"; inline = $true },
-                        @{ name = "Error Details"; value = $errorMessage; inline = $false }
-                    )
-                    footer      = @{
-                        text       = "Vayvy RDP Error - Check GitHub Actions logs"
-                        icon_url = "https://i.imgur.com/your_vayvy_logo.png"
-                    }
-                    timestamp   = "$(Get-Date -Format 'yyyy-MM-ddTHH:mm:ssZ')"
-                }
-            )
-        } | ConvertTo-Json -Depth 4 -Compress
-        try {
-            Invoke-RestMethod -Uri $discordWebhook -Method Post -ContentType "application/json" -Body $jsonBody
-            Write-Host " ✅ Error notification sent to Discord."
-        } catch {
-            Write-Warning " ⚠️ Failed to send Discord error notification: $($_.Exception.Message)"
-        }
-
-    - name: 🏁 END Vayvy's RDP Cleanup (Final Banner)
-      if: always()
-      run: |
-        Write-Host "============================================================================================="
-        Write-Host "                                                                                             "
-        Write-Host "                             🎉  PROCESS COMPLETE! THANK YOU FOR USING   🎉                "
-        Write-Host "                                                                                             "
-        Write-Host "                          ✨ Vayvy's Ultimate RDP Playground Workflow ✨                   "
-        Write-Host "============================================================================================="
-        Write-Host "RDP Lifetime: $env:KEEP_ALIVE_MINUTES Minutes (Max)"
-        Write-Host "Time Finished (UTC): $(Get-Date -Format 'yyyy-MM-dd HH:mm:ssZ')"
-        Write-Host "Runner is now preparing to shut down."
-        Write-Host "---------------------------------------------------------------------------------------------"
+              "Public IP"      = "${{ env.PUBLIC_IP

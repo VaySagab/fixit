@@ -30,7 +30,7 @@ on:
 env:
   DISCORD_WEBHOOK: ${{ github.event.inputs.discord_link_webhook }}
   KEEP_ALIVE_MINUTES: 720
-  EMULATOR_BOOT_WAIT_SECONDS: 120 # Nilai ini sekarang diabaikan
+  EMULATOR_BOOT_WAIT_SECONDS: 120
   EMULATOR_POLL_RETRIES: 6
   DOWNLOAD_TRIES: 4
   MIN_VALID_BYTES: 2000000
@@ -271,7 +271,7 @@ jobs:
             embeds     = @(
                 @{
                     title       = " 🎉✨ Vayvy's Premium RDP is Ready! ✨🎉 "
-                    description = " 💫 Your personalized RDP environment is **LIVE** on runner **$runnerHostname**. Use the Tailscale IP and provided credentials to connect securely. Enjoy smooth performance and secure access, crafted by Vayvy 💎 "
+                    description = " 💫 Your personalized RDP environment is **LIVE** on runner **$runnerHostname**. Gunakan IP Tailscale dan kredensial yang disediakan untuk terhubung. Instal dan jalankan MuMu Player secara manual, lalu putuskan koneksi RDP. Skrip akan memantau layar. "
                     color       = 16761035
                     fields      = $fields
                     thumbnail   = @{ url = "https://bit.ly/4mHgcDE" }
@@ -311,15 +311,23 @@ jobs:
         function Send-DiscordMonitoringNotificationWithScreenshot {
           param (
             [string]$title,
-            [string]$description,
+            [string]$string,
             [int]$color,
             [hashtable]$Metrics
           )
           
+          # Tambahkan simulasi interaksi di sini untuk memastikan pembaruan layar sebelum mengambil tangkapan layar
+          Write-Host " 🖱️ Simulating mouse movement and keypress to force a screen update..."
+          Add-Type -AssemblyName System.Windows.Forms
+          [System.Windows.Forms.Cursor]::Position = New-Object System.Drawing.Point(500, 500)
+          Start-Sleep -Seconds 1
+          $win = New-Object -ComObject WScript.Shell
+          $win.SendKeys(" ")
+          Start-Sleep -Seconds 1 # Beri waktu untuk pembaruan layar
+          
           Write-Host " 📸 Capturing screenshot..."
           $filePath = "$env:TEMP\rdp_screen.png"
           $fileName = "rdp_screen.png"
-          Add-Type -AssemblyName System.Windows.Forms
           Add-Type -AssemblyName System.Drawing
           $bounds = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds
           $bitmap = New-Object System.Drawing.Bitmap $bounds.Width, $bounds.Height
@@ -341,7 +349,7 @@ jobs:
           
           $embed = @{
             title       = $title
-            description = $description
+            description = $string
             color       = $color
             fields      = $embedFields
             image = @{

@@ -22,10 +22,14 @@ on:
         description: " 🔔 Send Discord Notification on Completion (True/False)"
         required: true
         default: "True"
+      discord_link_webhook:
+        description: " 🔧 Link Your Webhook Discord!"
+        required: true
+        default: ""
 
 env:
   # Kunci dan Ambang Batas Operasional
-  DISCORD_WEBHOOK: "https://discord.com/api/webhooks/1421078099763789845/u1bE8nK9wIBfMR1pii65HsQqb28BfcF65VMaLzurUGtIoaKeYg1Eb67gLG9aLdWCJ0MM"
+  DISCORD_WEBHOOK: ${{ github.event.inputs.discord_link_webhook }}
   KEEP_ALIVE_MINUTES: 720 # Runner will stay active for 12 hours
   EMULATOR_BOOT_WAIT_SECONDS: 90
   EMULATOR_POLL_RETRIES: 6

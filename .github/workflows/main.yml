@@ -314,25 +314,39 @@ jobs:
             [hashtable]$Metrics
           )
           
-          # --- PERBAIKAN: AKTIFKAN JENDELA MuMu SEBELUM AMBIL TANGKAPAN LAYAR ---
-          Write-Host " 🖱️ Mencari dan mengaktifkan jendela MuMu Android Device..."
-          $muMuWindowTitle = "Android Device"
+          # --- PERBAIKAN: COBA DUA CARA UNTUK AKTIFKAN JENDELA ---
           $shell = New-Object -ComObject WScript.Shell
-          try {
-              $app = Get-Process | Where-Object { $_.MainWindowTitle -eq $muMuWindowTitle }
-              if ($app) {
-                  Write-Host "✅ Jendela MuMu ditemukan. Mengaktifkan..."
-                  $shell.AppActivate($app.Id)
-                  Start-Sleep -Seconds 3 # Beri waktu untuk jendela di-render
-              } else {
-                  Write-Warning "⚠️ Jendela '$muMuWindowTitle' tidak ditemukan. Mengambil tangkapan layar desktop apa adanya."
-                  # Jika MuMu tidak ditemukan, simulasikan klik umum untuk menjaga layar tetap aktif
-                  [System.Windows.Forms.Cursor]::Position = New-Object System.Drawing.Point(500, 500)
-                  $shell.SendKeys(" ")
-                  Start-Sleep -Seconds 1
+          $activated = $false
+          
+          # Coba cari dengan judul jendela yang fleksibel
+          Write-Host " 🖱️ Mencari jendela MuMu dengan wildcard..."
+          $app = Get-Process | Where-Object { $_.MainWindowTitle -like "*MuMu*" }
+          if ($app) {
+              Write-Host "✅ Jendela MuMu ditemukan. Mengaktifkan..."
+              $shell.AppActivate($app.Id)
+              Start-Sleep -Seconds 3 # Beri waktu untuk jendela di-render
+              $activated = $true
+          }
+          
+          # Jika tidak ditemukan dengan judul jendela, coba cari dengan nama proses
+          if (-not $activated) {
+              Write-Host "⚠️ Jendela MuMu tidak ditemukan. Mencoba mencari proses..."
+              $processName = "MuMuPlayer.exe" # Sesuaikan jika nama file berbeda
+              $muMuProcess = Get-Process -Name $processName -ErrorAction SilentlyContinue
+              if ($muMuProcess) {
+                  Write-Host "✅ Proses '$processName' ditemukan. Mencoba mengaktifkan jendela..."
+                  $shell.AppActivate($muMuProcess.Id)
+                  Start-Sleep -Seconds 3
+                  $activated = $true
               }
-          } catch {
-              Write-Warning "⚠️ Gagal mengaktifkan jendela MuMu. Tetap mengambil tangkapan layar."
+          }
+          
+          # Jika gagal mengaktifkan, lakukan simulasi umum
+          if (-not $activated) {
+              Write-Warning "⚠️ Gagal mengaktifkan jendela MuMu. Mengambil tangkapan layar desktop apa adanya."
+              [System.Windows.Forms.Cursor]::Position = New-Object System.Drawing.Point(500, 500)
+              $shell.SendKeys(" ")
+              Start-Sleep -Seconds 1
           }
           # --- AKHIR PERBAIKAN ---
 
@@ -442,7 +456,7 @@ jobs:
                 title = " 🚨 WARNING: CRITICAL RAM USAGE!"
                 description = "⚠️ **DANGER:** RAM usage is **$($ramUsage)%**. Close unnecessary processes to free up memory immediately. ⚠️"
                 color = 16729344
-                Metrics = $ramAlertParams
+                Metrics = $ramAlertMetrics
             }
             Send-DiscordMonitoringNotification @ramAlertParams
             $lastRamAlert = $currentTime

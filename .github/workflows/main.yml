@@ -56,15 +56,15 @@ jobs:
         # ASCII ART START: Large, Decorative Welcome Banner (Achieving Visual Appeal)
         Write-Host "                                                                                             "
         Write-Host " ╔═════════════════════════════════════════════════════════════════════════════════════════╗"
-        Write-Host " ║    ██╗   ██╗ █████╗ ██╗   ██╗ ██╗    ██╗ ██╗   ██╗ ██████╗ ███████╗ █████╗ ██╗  ██╗    ║"
-        Write-Host " ║    ██║   ██║██╔══██╗██║   ██║ ██║ █╗ ██║ ██║   ██║██╔════╝ ██╔════╝██╔══██╗██║ ██╔╝    ║"
-        Write-Host " ║    ██║   ██║███████║██║   ██║ ██║███╗██║ ██║   ██║██║  ███╗█████╗  ███████║█████╗     ║"
-        Write-Host " ║    ╚██╗ ██╔╝██╔══██║██║   ██║ ██║███╗██║ ██║   ██║██║   ██║██╔══╝  ██╔══██║██╔═██╗    ║"
-        Write-Host " ║     ╚████╔╝ ██║  ██║╚██████╔╝ ╚███╔███╔╝ ╚██████╔╝╚██████╔╝███████╗██║  ██║██║  ██╗   ║"
-        Write-Host " ║      ╚═══╝  ╚═╝  ╚═╝ ╚═════╝   ╚══╝╚══╝   ╚═════╝  ╚═════╝ ╚══════╝╚═╝  ╚═╝╚═╝  ╚═╝   ║"
+        Write-Host " ║    ██╗   ██╗ █████╗ ██╗   ██╗ ██╗    ██╗ ██╗   ██╗ ██████╗ ███████╗ █████╗ ██╗  ██╗     ║"
+        Write-Host " ║    ██║   ██║██╔══██╗██║   ██║ ██║ █╗ ██║ ██║   ██║██╔════╝ ██╔════╝██╔══██╗██║ ██╔╝     ║"
+        Write-Host " ║    ██║   ██║███████║██║   ██║ ██║███╗██║ ██║   ██║██║  ███╗█████╗  ███████║█████╗      ║"
+        Write-Host " ║    ╚██╗ ██╔╝██╔══██║██║   ██║ ██║███╗██║ ██║   ██║██║   ██║██╔══╝  ██╔══██║██╔═██╗     ║"
+        Write-Host " ║      ╚████╔╝ ██║  ██║╚██████╔╝ ╚███╔███╔╝ ╚██████╔╝╚██████╔╝███████╗██║  ██║██║  ██╗    ║"
+        Write-Host " ║      ╚═══╝  ╚═╝  ╚═╝ ╚═════╝   ╚══╝╚══╝   ╚═════╝  ╚═════╝ ╚══════╝╚═╝  ╚═╝╚═╝  ╚═╝    ║"
         Write-Host " ╚═════════════════════════════════════════════════════════════════════════════════════════╝"
         Write-Host "============================================================================================="
-        Write-Host "===  🚀 Vayvy's Ultimate RDP Playground - Setup Commenced! 🌟                              ==="
+        Write-Host "===  🚀 Vayvy's Ultimate RDP Playground - Setup Commenced! 🌟                          ==="
         Write-Host "============================================================================================="
         Write-Host "Runner Hostname: $env:COMPUTERNAME"
         Write-Host "Workflow ID: ${{ github.run_id }}"
@@ -176,21 +176,21 @@ jobs:
         
         # 1. Enable RDP Transfer Protocols (Use both UDP and TCP)
         $regPathBase = 'HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services'
-        Write-Host "   -> Setting RDP Transport (UDP/TCP)..."
+        Write-Host "    -> Setting RDP Transport (UDP/TCP)..."
         # Buat path dasar jika tidak ada
         New-Item -Path $regPathBase -Force | Out-Null
         Set-ItemProperty -Path $regPathBase -Name "fEnableRDPTransport" -Type DWord -Value 1 -Force
         
         # 2. Enable hardware graphics adapters for all Remote Desktop Services Sessions (RemoteFX)
         $regPathGraphics = 'HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services\TSAppSrv\ApplicationCompatibility'
-        Write-Host "   -> Enabling RemoteFX/Hardware Acceleration (if available)..."
+        Write-Host "    -> Enabling RemoteFX/Hardware Acceleration (if available)..."
         # FIX KRUSIAL: Buat path registri yang hilang sebelum menulis nilai
         New-Item -Path $regPathGraphics -Force -Type Directory | Out-Null
         Set-ItemProperty -Path $regPathGraphics -Name "DisableRDPForcePnpWait" -Type DWord -Value 0 -Force
         
         # 3. Optimize Visuals for Performance (Disable desktop composition, etc.)
         $regPathRdpTcp = 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp'
-        Write-Host "   -> Adjusting display settings for performance..."
+        Write-Host "    -> Adjusting display settings for performance..."
         Set-ItemProperty -Path $regPathRdpTcp -Name "ColorDepth" -Type DWord -Value 2 -Force # 15-bit color depth (Performance)
 
         # --- TAMBAHAN: Tweaks Visual untuk Performa Agresif ---
@@ -227,11 +227,11 @@ jobs:
         
         # Set the title (Caption) - Interactive logon: Message title for users attempting to log on
         Set-ItemProperty -Path $regPath -Name "legalnoticecaption" -Type String -Value $watermarkTitle -Force
-        Write-Host "   -> Watermark Title Set: '$watermarkTitle'"
+        Write-Host "    -> Watermark Title Set: '$watermarkTitle'"
         
         # Set the message text (Body) - Interactive logon: Message text for users attempting to log on
         Set-ItemProperty -Path $regPath -Name "legalnoticetext" -Type String -Value $watermarkText -Force
-        Write-Host "   -> Watermark Body Set (Includes required branding text)."
+        Write-Host "    -> Watermark Body Set (Includes required branding text)."
         
         Write-Host " ✅ Persistent Watermark is configured and will display upon RDP connection."
 
@@ -255,7 +255,7 @@ jobs:
         # Wait for Tailscale to assign an IP
         $tsIP = $null
         $retries = 0
-        Write-Host "   -> Waiting for Tailscale IP assignment (Max 10 retries)..."
+        Write-Host "    -> Waiting for Tailscale IP assignment (Max 10 retries)..."
         while (-not $tsIP -and $retries -lt 10) {
           $tsIP = & "$env:ProgramFiles\Tailscale\tailscale.exe" ip -4
           Start-Sleep -Seconds 5
@@ -272,7 +272,7 @@ jobs:
     - name: ✅ Verify RDP Accessibility (Preserved Original)
       run: |
         Write-Host " ✅ Step: Verifying RDP Accessibility via Tailscale IP..."
-        Write-Host "   -> Tailscale IP for testing: $env:TAILSCALE_IP"
+        Write-Host "    -> Tailscale IP for testing: $env:TAILSCALE_IP"
 
         # Test connectivity using Test-NetConnection against the Tailscale IP on port 3389
         $testResult = Test-NetConnection -ComputerName $env:TAILSCALE_IP -Port 3389
@@ -348,11 +348,11 @@ jobs:
                     thumbnail   = @{ url = "https://bit.ly/4mHgcDE" } # Placeholder/Example URL
                     image       = @{ url = "https://bit.ly/4mHgcDE" } # Placeholder/Example URL
                     author      = @{
-                        name     = "Vayvy's RDP Service Status"
+                        name       = "Vayvy's RDP Service Status"
                         icon_url = "https://bit.ly/4mHgcDE"
                     }
                     footer      = @{
-                        text     = " ✨ RDP Made by Vayvy | Workflow ID: ${{ github.run_id }} | Timezone: UTC "
+                        text       = " ✨ RDP Made by Vayvy | Workflow ID: ${{ github.run_id }} | Timezone: UTC "
                         icon_url = "https://i.imgur.com/your_vayvy_logo.png" # Placeholder/Example URL
                     }
                     timestamp   = "$(Get-Date -Format 'yyyy-MM-ddTHH:mm:ssZ')"
@@ -377,14 +377,21 @@ jobs:
         $crashThresholdRAM = 90
         $lastCpuAlert = (Get-Date).AddSeconds(-$alertCooldownSeconds)
         $lastRamAlert = (Get-Date).AddSeconds(-$alertCooldownSeconds)
+        
+        # ================= KOREKSI FUNGSI UNTUK MENGIRIM EMBED + SCREENSHOT =================
+        function Send-DiscordMonitoringNotificationWithScreenshot {
+          param (
+            [string]$title,
+            [string]$description,
+            [int]$color,
+            [hashtable]$Metrics
+          )
 
-        # ================= Tambahan fungsi untuk screenshot =================
-        function Send-DiscordScreenshot {
-          param([string]$title)
-
+          Write-Host " 📸 Capturing screenshot..."
           $filePath = "$env:TEMP\rdp_screen.png"
+          $fileName = "rdp_screen.png"
 
-          # ambil screenshot full layar
+          # Ambil screenshot full layar
           Add-Type -AssemblyName System.Windows.Forms
           Add-Type -AssemblyName System.Drawing
           $bounds = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds
@@ -395,64 +402,55 @@ jobs:
           $graphics.Dispose()
           $bitmap.Dispose()
 
-          $boundary = [System.Guid]::NewGuid().ToString()
-          $LF = "`r`n"
-          $fileBytes = [System.IO.File]::ReadAllBytes($filePath)
-          $fileEnc = [System.Text.Encoding]::GetEncoding("ISO-8859-1").GetString($fileBytes)
-
-          $bodyLines = (
-              "--$boundary",
-              "Content-Disposition: form-data; name=`"file1`"; filename=`"rdp_screen.png`"",
-              "Content-Type: image/png$LF",
-              $fileEnc,
-              "--$boundary--$LF"
-          ) -join $LF
-
-          Invoke-RestMethod -Uri $discordWebhook -Method Post -ContentType "multipart/form-data; boundary=$boundary" -Body $bodyLines
-          Write-Host " 📸 Screenshot terkirim ke Discord ($title)"
-        }
-        # ===================================================================
-
-        # Fungsi yang menangani notifikasi Discord
-        function Send-DiscordMonitoringNotification {
-          param (
-            [string]$title,
-            [string]$description,
-            [int]$color,
-            [hashtable]$Metrics
-          )
+          Write-Host " 📦 Building webhook payload..."
           $embedFields = @()
           foreach ($key in $Metrics.Keys) {
             $embedFields += @{
-              name   = $key
-              value  = $Metrics[$key]
+              name  = $key
+              value = $Metrics[$key]
               inline = $true
             }
           }
+          
+          # Tambahkan referensi screenshot ke dalam embed
+          $embed = @{
+            title       = $title
+            description = $description
+            color       = $color
+            fields      = $embedFields
+            image = @{
+              url = "attachment://$fileName"
+            }
+            footer      = @{
+              text = "Vayvy RDP Monitoring | Runner: $runnerHostname | Workflow: ${{ github.run_id }}"
+            }
+            timestamp   = "$(Get-Date -Format 'yyyy-MM-ddTHH:mm:ssZ')"
+          }
+          
+          # Payload JSON utama
           $jsonBody = @{
             username = "Vayvy's RDP Bot 🤖 "
-            embeds   = @(
-              @{
-                title       = $title
-                description = $description
-                color       = $color
-                fields      = $embedFields
-                footer      = @{
-                  text = "Vayvy RDP Monitoring | Runner: $runnerHostname | Workflow: ${{ github.run_id }}"
-                }
-                timestamp   = "$(Get-Date -Format 'yyyy-MM-ddTHH:mm:ssZ')"
-              }
-            )
+            embeds   = @($embed)
           } | ConvertTo-Json -Depth 4
+          
           try {
-            Invoke-RestMethod -Uri $discordWebhook -Method Post -ContentType "application/json" -Body $jsonBody
-            Write-Host " ✅ Sent monitoring info to Discord."
+            # Menggunakan -Form parameter untuk handling multipart otomatis
+            $form = @{
+              payload_json = $jsonBody
+              file = Get-Item $filePath
+            }
+            
+            Invoke-WebRequest -Uri $discordWebhook -Method Post -Form $form
+            
+            Write-Host " ✅ Sent monitoring info with screenshot to Discord."
+            Remove-Item $filePath -Force
           } catch {
             Write-Warning " ⚠️ Failed to send to Discord: $($_.Exception.Message)"
           }
         }
+        # ===================================================================
 
-        # Fungsi yang mendapatkan metrik sistem
+        # Fungsi yang mendapatkan metrik sistem (tidak ada perubahan)
         function Get-SystemMetrics {
           $cpu = (Get-Counter '\Processor(_Total)\% Processor Time').CounterSamples.CookedValue
           $memory = Get-WmiObject -Class Win32_OperatingSystem
@@ -464,7 +462,7 @@ jobs:
           } else {
             $ramUsagePercent = [math]::Round(($usedMemoryMB / $totalMemoryMB) * 100, 2)
           }
-         @{
+          @{
             CPU = [math]::Round($cpu, 2)
             TotalRAM = $totalMemoryMB
             UsedRAM = $usedMemoryMB
@@ -482,7 +480,7 @@ jobs:
           
           # 🚨 CPU Alert Logic (Crash Threshold)
           if ($cpuUsage -ge $crashThresholdCPU -and ($currentTime - $lastCpuAlert).TotalSeconds -ge $alertCooldownSeconds) {
-            $cpuAlertMetrics = @{ 
+            $cpuAlertMetrics = @{  
                 "Current CPU Usage" = "$($cpuUsage)%"
                 "Action Required"   = "Investigate high-load applications."
             }
@@ -492,13 +490,14 @@ jobs:
                 color = 16711680 # Red
                 Metrics = $cpuAlertMetrics
             }
+            # Panggil fungsi baru (tanpa screenshot karena ini hanya notifikasi darurat)
             Send-DiscordMonitoringNotification @cpuAlertParams
             $lastCpuAlert = $currentTime
           }
           
           # 🚨 RAM Alert Logic (Crash Threshold)
           if ($ramUsage -ge $crashThresholdRAM -and ($currentTime - $lastRamAlert).TotalSeconds -ge $alertCooldownSeconds) {
-            $ramAlertMetrics = @{ 
+            $ramAlertMetrics = @{  
                 "Current RAM Usage" = "$($ramUsage)%"
                 "Used/Total"        = "$($metrics.UsedRAM)MB / $($metrics.TotalRAM)MB"
             }
@@ -508,11 +507,12 @@ jobs:
                 color = 16729344 # Orange
                 Metrics = $ramAlertMetrics
             }
+            # Panggil fungsi baru (tanpa screenshot karena ini hanya notifikasi darurat)
             Send-DiscordMonitoringNotification @ramAlertParams
             $lastRamAlert = $currentTime
           }
           
-          # 📊 Periodic Status Update 
+          # 📊 Periodic Status Update  
           $statusMetrics = @{
               "CPU Usage"      = "$($metrics.CPU)%"
               "RAM Usage"      = "$($metrics.RAMUsagePercent)%"
@@ -527,15 +527,13 @@ jobs:
               color = 3447003 # Blue
               Metrics = $statusMetrics
           }
-          Send-DiscordMonitoringNotification @statusParams
-
-          # 📸 Screenshot hanya untuk status update
-          Send-DiscordScreenshot -title "RDP Status Screenshot"
+          # ➡️ PANGGIL FUNGSI BARU DI SINI
+          Send-DiscordMonitoringNotificationWithScreenshot @statusParams
 
           Write-Host " RDP Active - Keep Alive running for $env:KEEP_ALIVE_MINUTES minutes total."
           Start-Sleep -Seconds $monitoringIntervalSeconds
         }
-
+        
     - name: ❌ Discord Webhook Notification - Workflow Failed
       if: failure()
       run: |
@@ -559,7 +557,7 @@ jobs:
                         @{ name = "Error Details"; value = $errorMessage; inline = $false }
                     )
                     footer      = @{
-                        text     = "Vayvy RDP Error - Check GitHub Actions logs"
+                        text       = "Vayvy RDP Error - Check GitHub Actions logs"
                         icon_url = "https://i.imgur.com/your_vayvy_logo.png" # Placeholder/Example URL
                     }
                     timestamp   = "$(Get-Date -Format 'yyyy-MM-ddTHH:mm:ssZ')"
@@ -581,9 +579,9 @@ jobs:
         # ASCII ART START: Final Banner
         Write-Host "============================================================================================="
         Write-Host "                                                                                             "
-        Write-Host "                         🎉  PROCESS COMPLETE! THANK YOU FOR USING  🎉                       "
+        Write-Host "                             🎉  PROCESS COMPLETE! THANK YOU FOR USING   🎉                "
         Write-Host "                                                                                             "
-        Write-Host "                        ✨ Vayvy's Ultimate RDP Playground Workflow ✨                      "
+        Write-Host "                          ✨ Vayvy's Ultimate RDP Playground Workflow ✨                   "
         Write-Host "============================================================================================="
         Write-Host "RDP Lifetime: $env:KEEP_ALIVE_MINUTES Minutes (Max)"
         Write-Host "Time Finished (UTC): $(Get-Date -Format 'yyyy-MM-dd HH:mm:ssZ')"

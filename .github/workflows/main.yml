@@ -306,8 +306,6 @@ jobs:
         $lastCpuAlert = (Get-Date).AddSeconds(-$alertCooldownSeconds)
         $lastRamAlert = (Get-Date).AddSeconds(-$alertCooldownSeconds)
 
-        # Tidak ada lagi jeda waktu untuk MuMu karena Anda akan menginstalnya secara manual
-
         function Send-DiscordMonitoringNotificationWithScreenshot {
           param (
             [string]$title,
@@ -316,18 +314,32 @@ jobs:
             [hashtable]$Metrics
           )
           
-          # Tambahkan simulasi interaksi di sini untuk memastikan pembaruan layar sebelum mengambil tangkapan layar
-          Write-Host " 🖱️ Simulating mouse movement and keypress to force a screen update..."
-          Add-Type -AssemblyName System.Windows.Forms
-          [System.Windows.Forms.Cursor]::Position = New-Object System.Drawing.Point(500, 500)
-          Start-Sleep -Seconds 1
-          $win = New-Object -ComObject WScript.Shell
-          $win.SendKeys(" ")
-          Start-Sleep -Seconds 1 # Beri waktu untuk pembaruan layar
-          
+          # --- PERBAIKAN: AKTIFKAN JENDELA MuMu SEBELUM AMBIL TANGKAPAN LAYAR ---
+          Write-Host " 🖱️ Mencari dan mengaktifkan jendela MuMu Android Device..."
+          $muMuWindowTitle = "MuMu Android Device"
+          $shell = New-Object -ComObject WScript.Shell
+          try {
+              $app = Get-Process | Where-Object { $_.MainWindowTitle -eq $muMuWindowTitle }
+              if ($app) {
+                  Write-Host "✅ Jendela MuMu ditemukan. Mengaktifkan..."
+                  $shell.AppActivate($app.Id)
+                  Start-Sleep -Seconds 3 # Beri waktu untuk jendela di-render
+              } else {
+                  Write-Warning "⚠️ Jendela '$muMuWindowTitle' tidak ditemukan. Mengambil tangkapan layar desktop apa adanya."
+                  # Jika MuMu tidak ditemukan, simulasikan klik umum untuk menjaga layar tetap aktif
+                  [System.Windows.Forms.Cursor]::Position = New-Object System.Drawing.Point(500, 500)
+                  $shell.SendKeys(" ")
+                  Start-Sleep -Seconds 1
+              }
+          } catch {
+              Write-Warning "⚠️ Gagal mengaktifkan jendela MuMu. Tetap mengambil tangkapan layar."
+          }
+          # --- AKHIR PERBAIKAN ---
+
           Write-Host " 📸 Capturing screenshot..."
           $filePath = "$env:TEMP\rdp_screen.png"
           $fileName = "rdp_screen.png"
+          Add-Type -AssemblyName System.Windows.Forms
           Add-Type -AssemblyName System.Drawing
           $bounds = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds
           $bitmap = New-Object System.Drawing.Bitmap $bounds.Width, $bounds.Height
@@ -430,7 +442,7 @@ jobs:
                 title = " 🚨 WARNING: CRITICAL RAM USAGE!"
                 description = "⚠️ **DANGER:** RAM usage is **$($ramUsage)%**. Close unnecessary processes to free up memory immediately. ⚠️"
                 color = 16729344
-                Metrics = $ramAlertMetrics
+                Metrics = $ramAlertParams
             }
             Send-DiscordMonitoringNotification @ramAlertParams
             $lastRamAlert = $currentTime

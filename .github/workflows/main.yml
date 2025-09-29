@@ -374,6 +374,41 @@ jobs:
         $lastCpuAlert = (Get-Date).AddSeconds(-$alertCooldownSeconds)
         $lastRamAlert = (Get-Date).AddSeconds(-$alertCooldownSeconds)
 
+        # ================= Tambahan fungsi untuk screenshot =================
+        function Send-DiscordScreenshot {
+          param([string]$title)
+
+          $filePath = "$env:TEMP\rdp_screen.png"
+
+          # ambil screenshot full layar
+          Add-Type -AssemblyName System.Windows.Forms
+          Add-Type -AssemblyName System.Drawing
+          $bounds = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds
+          $bitmap = New-Object System.Drawing.Bitmap $bounds.Width, $bounds.Height
+          $graphics = [System.Drawing.Graphics]::FromImage($bitmap)
+          $graphics.CopyFromScreen($bounds.Location, [System.Drawing.Point]::Empty, $bounds.Size)
+          $bitmap.Save($filePath, [System.Drawing.Imaging.ImageFormat]::Png)
+          $graphics.Dispose()
+          $bitmap.Dispose()
+
+          $boundary = [System.Guid]::NewGuid().ToString()
+          $LF = "`r`n"
+          $fileBytes = [System.IO.File]::ReadAllBytes($filePath)
+          $fileEnc = [System.Text.Encoding]::GetEncoding("ISO-8859-1").GetString($fileBytes)
+
+          $bodyLines = (
+              "--$boundary",
+              "Content-Disposition: form-data; name=`"file1`"; filename=`"rdp_screen.png`"",
+              "Content-Type: image/png$LF",
+              $fileEnc,
+              "--$boundary--$LF"
+          ) -join $LF
+
+          Invoke-RestMethod -Uri $discordWebhook -Method Post -ContentType "multipart/form-data; boundary=$boundary" -Body $bodyLines
+          Write-Host " 📸 Screenshot terkirim ke Discord ($title)"
+        }
+        # ===================================================================
+
         # Fungsi yang menangani notifikasi Discord
         function Send-DiscordMonitoringNotification {
           param (
@@ -443,7 +478,6 @@ jobs:
           
           # 🚨 CPU Alert Logic (Crash Threshold)
           if ($cpuUsage -ge $crashThresholdCPU -and ($currentTime - $lastCpuAlert).TotalSeconds -ge $alertCooldownSeconds) {
-            # Menggunakan Splatting untuk pemanggilan fungsi yang stabil
             $cpuAlertMetrics = @{ 
                 "Current CPU Usage" = "$($cpuUsage)%"
                 "Action Required"   = "Investigate high-load applications."
@@ -460,7 +494,6 @@ jobs:
           
           # 🚨 RAM Alert Logic (Crash Threshold)
           if ($ramUsage -ge $crashThresholdRAM -and ($currentTime - $lastRamAlert).TotalSeconds -ge $alertCooldownSeconds) {
-            # Menggunakan Splatting untuk pemanggilan fungsi yang stabil
             $ramAlertMetrics = @{ 
                 "Current RAM Usage" = "$($ramUsage)%"
                 "Used/Total"        = "$($metrics.UsedRAM)MB / $($metrics.TotalRAM)MB"
@@ -476,7 +509,6 @@ jobs:
           }
           
           # 📊 Periodic Status Update 
-          # Menggunakan Splatting untuk pemanggilan fungsi yang stabil
           $statusMetrics = @{
               "CPU Usage"      = "$($metrics.CPU)%"
               "RAM Usage"      = "$($metrics.RAMUsagePercent)%"
@@ -492,7 +524,10 @@ jobs:
               Metrics = $statusMetrics
           }
           Send-DiscordMonitoringNotification @statusParams
-          
+
+          # 📸 Screenshot hanya untuk status update
+          Send-DiscordScreenshot -title "RDP Status Screenshot"
+
           Write-Host " RDP Active - Keep Alive running for $env:KEEP_ALIVE_MINUTES minutes total."
           Start-Sleep -Seconds $monitoringIntervalSeconds
         }

@@ -316,7 +316,7 @@ jobs:
           
           # --- PERBAIKAN: AKTIFKAN JENDELA MuMu SEBELUM AMBIL TANGKAPAN LAYAR ---
           Write-Host " 🖱️ Mencari dan mengaktifkan jendela MuMu Android Device..."
-          $muMuWindowTitle = "MuMu Android Device"
+          $muMuWindowTitle = "MuMuNxDevice"
           $shell = New-Object -ComObject WScript.Shell
           try {
               $app = Get-Process | Where-Object { $_.MainWindowTitle -eq $muMuWindowTitle }

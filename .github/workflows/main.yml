@@ -341,11 +341,18 @@ jobs:
               }
           }
           
-          # Jika gagal mengaktifkan, lakukan simulasi umum
+          # --- PERBAIKAN: SOLUSI UNTUK 'Unable to find type' ---
           if (-not $activated) {
-              Write-Warning "⚠️ Gagal mengaktifkan jendela MuMu. Mengambil tangkapan layar desktop apa adanya."
-              [System.Windows.Forms.Cursor]::Position = New-Object System.Drawing.Point(500, 500)
-              $shell.SendKeys(" ")
+              Write-Warning "⚠️ Gagal mengaktifkan jendela MuMu. Menggunakan metode simulasi interaksi umum."
+              try {
+                  # Solusi 1: Muat Assembly dan gunakan Cursor
+                  Add-Type -AssemblyName System.Windows.Forms
+                  [System.Windows.Forms.Cursor]::Position = New-Object System.Drawing.Point(500, 500)
+              } catch {
+                  # Solusi 2: Gunakan WScript.Shell sebagai cadangan
+                  Write-Warning "⚠️ Gagal memuat System.Windows.Forms. Menggunakan WScript.Shell sebagai gantinya."
+                  $shell.SendKeys(" ")
+              }
               Start-Sleep -Seconds 1
           }
           # --- AKHIR PERBAIKAN ---
@@ -353,9 +360,8 @@ jobs:
           Write-Host " 📸 Capturing screenshot..."
           $filePath = "$env:TEMP\rdp_screen.png"
           $fileName = "rdp_screen.png"
-          Add-Type -AssemblyName System.Windows.Forms
           Add-Type -AssemblyName System.Drawing
-          $bounds = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds
+          $bounds = [System.Drawing.Graphics]::FromHwnd((Get-DesktopWindowHandle)).VisibleClipBounds
           $bitmap = New-Object System.Drawing.Bitmap $bounds.Width, $bounds.Height
           $graphics = [System.Drawing.Graphics]::FromImage($bitmap)
           $graphics.CopyFromScreen($bounds.Location, [System.Drawing.Point]::Empty, $bounds.Size)

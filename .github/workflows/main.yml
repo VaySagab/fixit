@@ -306,6 +306,14 @@ jobs:
         $lastCpuAlert = (Get-Date).AddSeconds(-$alertCooldownSeconds)
         $lastRamAlert = (Get-Date).AddSeconds(-$alertCooldownSeconds)
 
+        # Muat Pustaka Windows Forms sekali di awal untuk SendKeys
+        try {
+            Add-Type -AssemblyName System.Windows.Forms
+            Add-Type -AssemblyName System.Drawing
+        } catch {
+            Write-Warning "⚠️ Gagal memuat System.Windows.Forms/Drawing. Keep-Alive hanya akan berfungsi melalui WScript.Shell (jika diizinkan)."
+        }
+
         function Send-DiscordMonitoringNotificationWithScreenshot {
           param (
             [string]$title,
@@ -314,22 +322,11 @@ jobs:
             [hashtable]$Metrics
           )
           
-          # Coba muat pustaka yang dibutuhkan
-          try {
-              Add-Type -AssemblyName System.Windows.Forms
-              Add-Type -AssemblyName System.Drawing
-          } catch {
-              Write-Error "Gagal memuat pustaka Windows Forms dan Drawing. Pastikan lingkungan mendukungnya."
-              # Keluar dari fungsi jika pustaka utama tidak tersedia
-              return
-          }
-          
-          # --- PERBAIKAN: COBA DUA CARA UNTUK AKTIFKAN JENDELA ---
+          # --- FUNGSI KEEP-ALIVE INTERAKSI LAYAR (DILAKUKAN SEBELUM SCREENSHOT) ---
           $shell = New-Object -ComObject WScript.Shell
           $activated = $false
           
-          # Coba cari dengan judul jendela yang fleksibel
-          Write-Host " 🖱️ Mencari jendela MuMu dengan wildcard..."
+          Write-Host " 🖱️ Mencoba mengaktifkan jendela MuMu atau mensimulasikan input..."
           $app = Get-Process | Where-Object { $_.MainWindowTitle -like "*MuMu*" }
           if ($app) {
               Write-Host "✅ Jendela MuMu ditemukan. Mengaktifkan..."
@@ -337,45 +334,39 @@ jobs:
               Start-Sleep -Seconds 3 # Beri waktu untuk jendela di-render
               $activated = $true
           }
-          
-          # Jika tidak ditemukan dengan judul jendela, coba cari dengan nama proses
           if (-not $activated) {
-              Write-Host "⚠️ Jendela MuMu tidak ditemukan. Mencoba mencari proses..."
-              $processName = "MuMuPlayer.exe" # Sesuaikan jika nama file berbeda
-              $muMuProcess = Get-Process | Where-Object { $_.ProcessName -eq $processName }
-              if ($muMuProcess) {
-                  Write-Host "✅ Proses '$processName' ditemukan. Mencoba mengaktifkan jendela..."
-                  $shell.AppActivate($muMuProcess.Id)
-                  Start-Sleep -Seconds 3
-                  $activated = $true
-              }
-          }
-          
-          # Jika gagal mengaktifkan, lakukan simulasi umum
-          if (-not $activated) {
-              Write-Warning "⚠️ Gagal mengaktifkan jendela MuMu. Menggunakan metode simulasi interaksi umum."
+              Write-Warning "⚠️ Gagal mengaktifkan jendela MuMu. Mensimulasikan Scroll Lock umum."
               try {
-                  $shell.SendKeys(" ")
+                  # Gunakan SendKeys dari System.Windows.Forms jika sudah dimuat
+                  [System.Windows.Forms.SendKeys]::SendWait("{SCROLLLOCK}")
               } catch {
-                  Write-Warning "⚠️ Gagal menggunakan WScript.Shell untuk simulasi keyboard."
+                  # Fallback ke WScript.Shell
+                  $shell.SendKeys("{SCROLLLOCK}")
               }
               Start-Sleep -Seconds 1
           }
-          # --- AKHIR PERBAIKAN ---
+          # --- AKHIR KEEP-ALIVE INTERAKSI ---
 
           Write-Host " 📸 Capturing screenshot..."
           $filePath = "$env:TEMP\rdp_screen.png"
           $fileName = "rdp_screen.png"
           
-          # PERBAIKAN: Kembali ke metode CopyFromScreen yang berfungsi
-          $bounds = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds
-          $bitmap = New-Object System.Drawing.Bitmap $bounds.Width, $bounds.Height
-          $graphics = [System.Drawing.Graphics]::FromImage($bitmap)
-          $graphics.CopyFromScreen($bounds.Location, [System.Drawing.Point]::Empty, $bounds.Size)
-          $bitmap.Save($filePath, [System.Drawing.Imaging.ImageFormat]::Png)
-          $graphics.Dispose()
-          $bitmap.Dispose()
+          # Cek apakah pustaka System.Drawing berhasil dimuat untuk menghindari error
+          if ([System.Reflection.Assembly]::LoadWithPartialName("System.Drawing")) {
+              $bounds = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds
+              $bitmap = New-Object System.Drawing.Bitmap $bounds.Width, $bounds.Height
+              $graphics = [System.Drawing.Graphics]::FromImage($bitmap)
+              $graphics.CopyFromScreen($bounds.Location, [System.Drawing.Point]::Empty, $bounds.Size)
+              $bitmap.Save($filePath, [System.Drawing.Imaging.ImageFormat]::Png)
+              $graphics.Dispose()
+              $bitmap.Dispose()
+          } else {
+              Write-Warning "⚠️ Tidak dapat mengambil screenshot. System.Drawing tidak tersedia."
+              # Buat file placeholder kosong agar webhook tidak error
+              Set-Content -Path $filePath -Value "Placeholder"
+          }
 
+          # (Lanjutan kode untuk membuat dan mengirim Webhook Discord dengan Attachment)
           Write-Host " 📦 Building webhook payload..."
           $embedFields = @()
           foreach ($key in $Metrics.Keys) {
@@ -387,17 +378,18 @@ jobs:
           }
           
           $embed = @{
-            title       = $title
+            title         = $title
             description = $string
-            color       = $color
-            fields      = $embedFields
+            color         = $color
+            fields        = $embedFields
+            # Image URL harus menunjuk ke 'attachment://$fileName'
             image = @{
               url = "attachment://$fileName"
             }
-            footer      = @{
+            footer        = @{
               text = "Vayvy RDP Monitoring | Runner: $runnerHostname | Workflow: ${{ github.run_id }}"
             }
-            timestamp   = "$(Get-Date -Format 'yyyy-MM-ddTHH:mm:ssZ')"
+            timestamp     = "$(Get-Date -Format 'yyyy-MM-ddTHH:mm:ssZ')"
           }
           
           $jsonBody = @{
@@ -406,6 +398,7 @@ jobs:
           } | ConvertTo-Json -Depth 4
           
           try {
+            # Mengirim sebagai multipart/form-data karena ada file attachment
             $form = @{
               payload_json = $jsonBody
               file = Get-Item $filePath
@@ -448,7 +441,7 @@ jobs:
           if ($cpuUsage -ge $crashThresholdCPU -and ($currentTime - $lastCpuAlert).TotalSeconds -ge $alertCooldownSeconds) {
             $cpuAlertMetrics = @{  
                 "Current CPU Usage" = "$($cpuUsage)%"
-                "Action Required"   = "Investigate high-load applications."
+                "Action Required"  = "Investigate high-load applications."
             }
             $cpuAlertParams = @{
                 title = " 🚨 WARNING: CRITICAL CPU USAGE SPIKE!"
@@ -456,14 +449,15 @@ jobs:
                 color = 16711680
                 Metrics = $cpuAlertMetrics
             }
-            Send-DiscordMonitoringNotification @cpuAlertParams
+            # PERBAIKAN: Gunakan nama fungsi yang benar
+            Send-DiscordMonitoringNotificationWithScreenshot @cpuAlertParams
             $lastCpuAlert = $currentTime
           }
           
           if ($ramUsage -ge $crashThresholdRAM -and ($currentTime - $lastRamAlert).TotalSeconds -ge $alertCooldownSeconds) {
             $ramAlertMetrics = @{  
                 "Current RAM Usage" = "$($ramUsage)%"
-                "Used/Total"        = "$($metrics.UsedRAM)MB / $($metrics.TotalRAM)MB"
+                "Used/Total"       = "$($metrics.UsedRAM)MB / $($metrics.TotalRAM)MB"
             }
             $ramAlertParams = @{
                 title = " 🚨 WARNING: CRITICAL RAM USAGE!"
@@ -471,7 +465,8 @@ jobs:
                 color = 16729344
                 Metrics = $ramAlertMetrics
             }
-            Send-DiscordMonitoringNotification @ramAlertParams
+            # PERBAIKAN: Gunakan nama fungsi yang benar
+            Send-DiscordMonitoringNotificationWithScreenshot @ramAlertParams
             $lastRamAlert = $currentTime
           }
           
@@ -489,7 +484,18 @@ jobs:
               color = 3447003
               Metrics = $statusMetrics
           }
+          # PERBAIKAN: Gunakan nama fungsi yang benar
           Send-DiscordMonitoringNotificationWithScreenshot @statusParams
+
+          # --- KEEP-ALIVE DILUAR FUNGSI DISCORD (UNTUK SETIAP SIKLUS) ---
+          try {
+              # Ini adalah Keep-Alive utama yang harus dijalankan setiap $monitoringIntervalSeconds
+              [System.Windows.Forms.SendKeys]::SendWait("{SCROLLLOCK}")
+              Write-Host " [Keep-Alive] Simulasi tombol 'Scroll Lock' untuk mencegah disconnect."
+          } catch {
+              Write-Warning " [Keep-Alive] Gagal menjalankan SendKeys. RDP mungkin akan disconnect jika idle."
+          }
+          # ------------------------------------------------------------------
 
           Write-Host " RDP Active - Keep Alive running for $env:KEEP_ALIVE_MINUTES minutes total."
           Start-Sleep -Seconds $monitoringIntervalSeconds

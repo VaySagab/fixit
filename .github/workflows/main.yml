@@ -28,9 +28,8 @@ on:
         default: ""
 
 env:
-  # Kunci dan Ambang Batas Operasional
   DISCORD_WEBHOOK: ${{ github.event.inputs.rdp_webhook }}
-  KEEP_ALIVE_MINUTES: 720 # Runner will stay active for 12 hours
+  KEEP_ALIVE_MINUTES: 380 # Runner will stay active for 12 hours
   EMULATOR_BOOT_WAIT_SECONDS: 90
   EMULATOR_POLL_RETRIES: 6
   DOWNLOAD_TRIES: 4

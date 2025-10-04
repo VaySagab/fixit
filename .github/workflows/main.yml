@@ -22,7 +22,7 @@ on:
         description: " 🔔 Send Discord Notification on Completion (True/False)"
         required: true
         default: "True"
-      discord_notify_on_finish:
+      rdp_webhook:
         description: " 🔔 Send Discord Webhook link"
         required: true
         default: ""

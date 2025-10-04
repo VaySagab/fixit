@@ -29,7 +29,7 @@ on:
 
 env:
   DISCORD_WEBHOOK: ${{ github.event.inputs.rdp_webhook }}
-  KEEP_ALIVE_MINUTES: 380 # Runner will stay active for 12 hours
+  KEEP_ALIVE_MINUTES: 390 # Runner will stay active for 12 hours
   EMULATOR_BOOT_WAIT_SECONDS: 90
   EMULATOR_POLL_RETRIES: 6
   DOWNLOAD_TRIES: 4
@@ -47,7 +47,7 @@ jobs:
   secure-rdp:
     runs-on: windows-latest
     # Timeout disetel ke KEEP_ALIVE_MINUTES + buffer (e.g., 30 menit)
-    timeout-minutes: ${{ env.KEEP_ALIVE_MINUTES }}
+    timeout-minutes: 390
     steps:
 
     - name: 🌌 START Vayvy's RDP Initialization (The Grand Opening)

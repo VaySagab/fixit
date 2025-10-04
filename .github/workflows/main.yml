@@ -9,53 +9,60 @@ on:
       rdp_password:
         description: " 🔒 Strong RDP Password (min 12 chars, incl. special)"
         required: true
-        default: "Vay2025!"
+        default: "Vay2025!" # Default for convenience, user should change
       rdp_enable_max_performance:
         description: " ⚡ Maximize RDP Performance (True/False - Experimental)"
         required: true
         default: "True"
-      rdp_download_mumu:
+      rdp_install_mumu:
         description: " 🎮 Download MuMu Player 5 (True/False)"
         required: true
-        default: "True"
+        default: "false"
       discord_notify_on_finish:
         description: " 🔔 Send Discord Notification on Completion (True/False)"
         required: true
         default: "True"
-      discord_link_webhook:
-        description: " 🔧 Link Your Webhook Discord!"
+      discord_notify_on_finish:
+        description: " 🔔 Send Discord Webhook link"
         required: true
         default: ""
 
 env:
-  DISCORD_WEBHOOK: ${{ github.event.inputs.discord_link_webhook }}
-  KEEP_ALIVE_MINUTES: 720
-  EMULATOR_BOOT_WAIT_SECONDS: 120
+  # Kunci dan Ambang Batas Operasional
+  DISCORD_WEBHOOK: ${{ github.event.inputs.rdp_webhook }}
+  KEEP_ALIVE_MINUTES: 720 # Runner will stay active for 12 hours
+  EMULATOR_BOOT_WAIT_SECONDS: 90
   EMULATOR_POLL_RETRIES: 6
   DOWNLOAD_TRIES: 4
-  MIN_VALID_BYTES: 2000000
+  MIN_VALID_BYTES: 2000000 # Minimum expected size for MuMu installer
   RDP_WM_TEXT: "VayVy RDP - Made with 💖"
+
+  # Variabel Turunan dari Input
   RDP_USER_INPUT: ${{ github.event.inputs.rdp_username }}
   RDP_PASS_INPUT: ${{ github.event.inputs.rdp_password }}
   RDP_MAX_PERFORMANCE: ${{ github.event.inputs.rdp_enable_max_performance }}
-  RDP_DOWNLOAD_MUMU: ${{ github.event.inputs.rdp_download_mumu }}
+  RDP_INSTALL_MUMU: ${{ github.event.inputs.rdp_install_mumu }}
   DISCORD_NOTIFY_ON_FINISH: ${{ github.event.inputs.discord_notify_on_finish }}
 
 jobs:
   secure-rdp:
     runs-on: windows-latest
-    timeout-minutes: 3600
+    # Timeout disetel ke KEEP_ALIVE_MINUTES + buffer (e.g., 30 menit)
+    timeout-minutes: ${{ env.KEEP_ALIVE_MINUTES }}
     steps:
 
     - name: 🌌 START Vayvy's RDP Initialization (The Grand Opening)
       run: |
+        # =========================================================================
+        # ASCII ART START: Large, Decorative Welcome Banner (Achieving Visual Appeal)
+        Write-Host "                                                                                             "
         Write-Host " ╔═════════════════════════════════════════════════════════════════════════════════════════╗"
-        Write-Host " ║    ██╗  ██╗ █████╗ ██╗  ██╗ ██╗     ██╗ ██╗  ██╗ ██████╗ ███████╗ █████╗ ██╗  ██╗     ║"
-        Write-Host " ║    ██║  ██║██╔══██╗██║  ██║ ██║ █╗ ██║ ██║  ██║██╔════╝ ██╔════╝██╔══██╗██║ ██╔╝      ║"
-        Write-Host " ║    ██║  ██║███████║██║  ██║ ██║███╗██║ ██║  ██║██║  ███╗█████╗  ███████║█████╗      ║"
-        Write-Host " ║    ╚██╗ ██╔╝██╔══██║██║  ██║ ██║███╗██║ ██║  ██║██║  ██║██╔══╝  ██╔══██║██╔═██╗      ║"
-        Write-Host " ║      ╚████╔╝ ██║  ██║╚██████╔╝ ╚███╔███╔╝ ╚██████╔╝╚██████╔╝╚███████╗██║  ██║██║  ██╗      ║"
-        Write-Host " ║      ╚═══╝  ╚═╝  ╚═╝ ╚═════╝  ╚══╝╚══╝  ╚═════╝  ╚═════╝ ╚══════╝╚═╝  ╚═╝╚═╝  ╚═╝      ║"
+        Write-Host " ║   ██╗  ██╗ █████╗ ██╗  ██╗ ██╗   ██╗ ██╗  ██╗ ██████╗ ███████╗ █████╗ ██╗ ██╗     ║"
+        Write-Host " ║   ██║  ██║██╔══██╗██║  ██║ ██║ █╗ ██║ ██║  ██║██╔════╝ ██╔════╝██╔══██╗██║ ██╔╝    ║"
+        Write-Host " ║   ██║  ██║███████║██║  ██║ ██║███╗██║ ██║  ██║██║ ███╗█████╗  ███████║█████╗      ║"
+        Write-Host " ║   ╚██╗ ██╔╝██╔══██║██║  ██║ ██║███╗██║ ██║  ██║██║  ██║██╔══╝  ██╔══██║██╔═██╗    ║"
+        Write-Host " ║     ╚████╔╝ ██║ ██║╚██████╔╝ ╚███╔███╔╝ ╚██████╔╝╚██████╔╝███████╗██║  ██║██║ ██╗    ║"
+        Write-Host " ║      ╚═══╝  ╚═╝ ╚═╝ ╚═════╝   ╚══╝╚══╝  ╚═════╝  ╚═════╝ ╚══════╝╚═╝  ╚═╝╚═╝ ╚═╝    ║"
         Write-Host " ╚═════════════════════════════════════════════════════════════════════════════════════════╝"
         Write-Host "============================================================================================="
         Write-Host "===  🚀 Vayvy's Ultimate RDP Playground - Setup Commenced! 🌟                          ==="
@@ -67,21 +74,26 @@ jobs:
         Write-Host "Configuration Parameters:"
         Write-Host " -> Keep Alive Duration: $env:KEEP_ALIVE_MINUTES Minutes"
         Write-Host " -> Max Performance Mode: $env:RDP_MAX_PERFORMANCE"
-        Write-Host " -> MuMu Player Download: $env:RDP_DOWNLOAD_MUMU"
+        Write-Host " -> MuMu Player Download: $env:RDP_INSTALL_MUMU"
         Write-Host "============================================================================================="
+        # ASCII ART END
     
     - name: 🗺️ Geolocation dan Public IP Discovery
       run: |
         Write-Host " 🗺️ Step: Determining RDP location and Public IP..."
         try {
             $geoData = Invoke-RestMethod -Uri "http://ipinfo.io/json" -TimeoutSec 15
+            
             $publicIP = $geoData.ip
             $city = $geoData.city
             $country = $geoData.country
             $org = $geoData.org
+
             $rdpLocation = "$city, $country ($org)"
+
             echo "PUBLIC_IP=$publicIP" >> $env:GITHUB_ENV
             echo "RDP_LOCATION=$rdpLocation" >> $env:GITHUB_ENV
+
             Write-Host " ✅ Public IP Identified: $publicIP"
             Write-Host " ✅ RDP Geolocation: $rdpLocation"
         } catch {
@@ -90,15 +102,20 @@ jobs:
             echo "RDP_LOCATION=Unknown/Error" >> $env:GITHUB_ENV
         }
 
-    - name: ⚙️ Konfigurasi Pengaturan RDP Inti (Preserved Original)
+    - name: ⚙️ Konfigurasi Pengaturan RDP Inti
       run: |
-        Write-Host " ⚙️ Step: Applying core RDP connectivity settings (Original Script Logic)..."
-        Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -Name "fDenyTSConnections" -Value 0 -Force
-        Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -Name "UserAuthentication" -Value 0 -Force
-        Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -Name "SecurityLayer" -Value 0 -Force
+        Write-Host " ⚙️ Step: Applying core RDP connectivity settings..."
+        Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' `
+        -Name "fDenyTSConnections" -Value 0 -Force
+        Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' `
+        -Name "UserAuthentication" -Value 0 -Force
+        Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' `
+        -Name "SecurityLayer" -Value 0 -Force
         netsh advfirewall firewall delete rule name="RDP-Tailscale"
-        netsh advfirewall firewall add rule name="RDP-Tailscale" dir=in action=allow protocol=TCP localport=3389
+        netsh advfirewall firewall add rule name="RDP-Tailscale" `
+        dir=in action=allow protocol=TCP localport=3389
         Restart-Service -Name TermService -Force
+        
         Write-Host "`n"
         Write-Host "=== RDP Configuration and Security Audit Summary ==="
         Write-Host "| **Parameter** | **Status/Value** | **Security Implication** |"
@@ -108,58 +125,79 @@ jobs:
         Write-Host "| Security Layer | RDP Protocol (0) | ⚠️ Uses Legacy Security Negotiation |"
         Write-Host "| Firewall Rule | Allow TCP 3389 | ✅ Tailscale Tunnel Ready |"
         Write-Host "====================================================`n"
-    
+        
+
     - name: 🔒 Create Custom Secure RDP User (Vayvy's Touch)
       run: |
         $username = "$env:RDP_USER_INPUT"
         $password = "$env:RDP_PASS_INPUT"
+        
         Write-Host " 🔒 Step: Creating RDP User '$username' using Workflow Input..."
+        
         if (-not $username -or -not $password) {
             Write-Error "Username or Password input missing."
             echo " ❌  User creation failed: Missing required input." | Out-File -FilePath discord_error.txt
             exit 1
         }
+        
         Add-Type -AssemblyName System.Security
+
         $securePass = ConvertTo-SecureString $password -AsPlainText -Force
         New-LocalUser -Name $username -Password $securePass -AccountNeverExpires
+        
         Write-Host " -> User '$username' successfully created and set to never expire."
+        
         Add-LocalGroupMember -Group "Administrators" -Member $username
         Add-LocalGroupMember -Group "Remote Desktop Users" -Member $username
         Write-Host " -> User added to Administrators and Remote Desktop Users groups."
+
         echo "RDP_USERNAME=$username" >> $env:GITHUB_ENV
         echo "RDP_PASSWORD=$password" >> $env:GITHUB_ENV
+        
         Write-Host " ✅ User setup and privilege assignment complete."
 
     - name: ⚡ RDP Performance Optimization (Maximized)
       if: env.RDP_MAX_PERFORMANCE == 'True'
       run: |
         Write-Host " ⚡ Step: Applying RDP Optimization Settings (RemoteFX & UDP/TCP)..."
+        
         $regPathBase = 'HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services'
         Write-Host "    -> Setting RDP Transport (UDP/TCP)..."
         New-Item -Path $regPathBase -Force | Out-Null
         Set-ItemProperty -Path $regPathBase -Name "fEnableRDPTransport" -Type DWord -Value 1 -Force
+        
         $regPathGraphics = 'HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services\TSAppSrv\ApplicationCompatibility'
         Write-Host "    -> Enabling RemoteFX/Hardware Acceleration (if available)..."
         New-Item -Path $regPathGraphics -Force -Type Directory | Out-Null
         Set-ItemProperty -Path $regPathGraphics -Name "DisableRDPForcePnpWait" -Type DWord -Value 0 -Force
+        
         $regPathRdpTcp = 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp'
         Write-Host "    -> Adjusting display settings for performance..."
-        Set-ItemProperty -Path $regPathRdpTcp -Name "ColorDepth" -Type DWord -Value 2 -Force
+        Set-ItemProperty -Path $regPathRdpTcp -Name "ColorDepth" -Type DWord -Value 2 -Force # 15-bit color depth (Performance)
+
+        # --- TAMBAHAN: Tweaks Visual untuk Performa Agresif ---
         $regPathPerformance = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\RemoteDesktop\RDP\Client\Visuals'
         New-Item -Path $regPathPerformance -Force | Out-Null
-        Set-ItemProperty -Path $regPathPerformance -Name "SmoothScroll" -Type DWord -Value 0 -Force
-        Set-ItemProperty -Path $regPathPerformance -Name "DesktopBackground" -Type DWord -Value 0 -Force
-        Set-ItemProperty -Path $regPathPerformance -Name "MenuAnimation" -Type DWord -Value 0 -Force
-        Set-ItemProperty -Path $regPathPerformance -Name "WindowContents" -Type DWord -Value 0 -Force
-        Set-ItemProperty -Path $regPathPerformance -Name "FontSmoothing" -Type DWord -Value 0 -Force
+    
+        Set-ItemProperty -Path $regPathPerformance -Name "SmoothScroll" -Type DWord -Value 0 -Force # Matikan smooth scrolling
+        Set-ItemProperty -Path $regPathPerformance -Name "DesktopBackground" -Type DWord -Value 0 -Force # Matikan wallpaper
+        Set-ItemProperty -Path $regPathPerformance -Name "MenuAnimation" -Type DWord -Value 0 -Force # Matikan animasi menu
+        Set-ItemProperty -Path $regPathPerformance -Name "WindowContents" -Type DWord -Value 0 -Force # Jangan tampilkan isi jendela saat digeser
+        Set-ItemProperty -Path $regPathPerformance -Name "FontSmoothing" -Type DWord -Value 0 -Force # Matikan perataan font
+
         Write-Host " ✅ Optimasi RDP agresif selesai. Tampilan sekarang disetel untuk performa maksimal."
+        
         Set-ItemProperty -Path 'HKCU:\Control Panel\Desktop' -Name "TileWallPaper" -Type String -Value "0" -Force
         Set-ItemProperty -Path 'HKCU:\Control Panel\Desktop' -Name "Wallpaper" -Type String -Value "" -Force
+    
         Set-ItemProperty -Path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\VisualEffects' -Name "VisualFXSetting" -Type DWord -Value 2 -Force
+    
         $regPathExplorer = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced'
         Set-ItemProperty -Path $regPathExplorer -Name "IconsOnly" -Type DWord -Value 1 -Force
         Set-ItemProperty -Path $regPathExplorer -Name "ShowSyncInfo" -Type DWord -Value 0 -Force
+
         Write-Host " ✅ Optimasi File Explorer selesai. Desktop akan lebih ringan."
+        
         Write-Host " ✅ Performance optimization steps completed. System will utilize available acceleration."
 
     - name: 🖼️ Implement Persistent Vayvy Watermark
@@ -167,35 +205,44 @@ jobs:
         Write-Host " 🖼️ Step: Setting Persistent Watermark/Branding via Interactive Logon Message..."
         $regPath = 'HKLM:\Software\Microsoft\Windows\CurrentVersion\Policies\System'
         $watermarkTitle = "Vayvy RDP Access Disclaimer"
-        $watermarkText = "=========================================================`nTHIS RDP ENVIRONMENT IS PROPERTY OF VAYVY.  ANY UNAUTHORIZED USE OR MODIFICATION IS STRICTLY PROHIBITED.  CPU/RAM USAGE IS MONITORED VIA DISCORD WEBHOOKS."
+        $watermarkText = "=========================================================`nTHIS RDP ENVIRONMENT IS PROPERTY OF VAYVY. ANY UNAUTHORIZED USE OR MODIFICATION IS STRICTLY PROHIBITED. CPU/RAM USAGE IS MONITORED VIA DISCORD WEBHOOKS."
+        
         Set-ItemProperty -Path $regPath -Name "legalnoticecaption" -Type String -Value $watermarkTitle -Force
-        Write-Host "  -> Watermark Title Set: '$watermarkTitle'"
+        Write-Host "    -> Watermark Title Set: '$watermarkTitle'"
+        
         Set-ItemProperty -Path $regPath -Name "legalnoticetext" -Type String -Value $watermarkText -Force
-        Write-Host "  -> Watermark Body Set (Includes required branding text)."
+        Write-Host "    -> Watermark Body Set (Includes required branding text)."
+        
         Write-Host " ✅ Persistent Watermark is configured and will display upon RDP connection."
 
-    - name: 🌐 Install Tailscale (Preserved Original)
+    - name: 🌐 Install Tailscale
       run: |
         Write-Host " 🌐 Step: Installing Tailscale VPN Client..."
         $tsUrl = "https://pkgs.tailscale.com/stable/tailscale-setup-1.82.0-amd64.msi"
         $installerPath = "$env:TEMP\tailscale.msi"
+
         Invoke-WebRequest -Uri $tsUrl -OutFile $installerPath
         Start-Process msiexec.exe -ArgumentList "/i", "`"$installerPath`"", "/quiet", "/norestart" -Wait
         Remove-Item $installerPath -Force
         Write-Host " ✅ Tailscale installation complete."
-    
-    - name: 🔗 Establish Tailscale Connection (Preserved Original)
+        
+    - name: 🔗 Establish Tailscale Connection
       run: |
         Write-Host " 🔗 Step: Establishing Secure Tailscale Connection..."
+        # Menggunakan secrets.TAILSCALE_AUTH_KEY (Asumsi ini adalah secret yang benar)
         & "$env:ProgramFiles\Tailscale\tailscale.exe" up --authkey=${{ secrets.TAILSCALE_AUTH_KEY }} --hostname=gh-runner-$env:GITHUB_RUN_ID
+
         $tsIP = $null
         $retries = 0
-        Write-Host "  -> Waiting for Tailscale IP assignment (Max 10 retries)..."
+        Write-Host "    -> Waiting for Tailscale IP assignment (Max 10 retries)..."
         while (-not $tsIP -and $retries -lt 10) {
-          $tsIP = & "$env:ProgramFiles\Tailscale\tailscale.exe" ip -4
+          # Filter output untuk mendapatkan IP
+          $output = & "$env:ProgramFiles\Tailscale\tailscale.exe" ip -4 2>$null
+          if ($output) { $tsIP = $output | Where-Object { $_ -match '^\d+\.\d+\.\d+\.\d+$' } | Select-Object -First 1 }
           Start-Sleep -Seconds 5
           $retries++
         }
+
         if (-not $tsIP) {
             Write-Error "Tailscale IP not assigned. Exiting."
             exit 1
@@ -203,21 +250,22 @@ jobs:
         echo "TAILSCALE_IP=$tsIP" >> $env:GITHUB_ENV
         Write-Host " ✅ Tailscale Connection Established. IP Assigned: $tsIP"
 
-    - name: ✅ Verify RDP Accessibility (Preserved Original)
+    - name: ✅ Verify RDP Accessibility
       run: |
         Write-Host " ✅ Step: Verifying RDP Accessibility via Tailscale IP..."
-        Write-Host "  -> Tailscale IP for testing: $env:TAILSCALE_IP"
-        $testResult = Test-NetConnection -ComputerName $env:TAILSCALE_IP -Port 3389
+        Write-Host "    -> Tailscale IP for testing: $env:TAILSCALE_IP"
+
+        $testResult = Test-NetConnection -ComputerName $env:TAILSCALE_IP -Port 3389 -InformationLevel Detailed -ErrorAction Stop
         if (-not $testResult.TcpTestSucceeded) {
             Write-Error "TCP connection to RDP port 3389 failed"
             exit 1
         }
         Write-Host " 🎉 TCP connectivity successful! RDP is fully accessible."
 
-    - name: 🎮 Download MuMu Player 5
-      if: env.RDP_DOWNLOAD_MUMU == 'True'
+    - name: 🎮 Download MuMu Player 5 (Vayvy's Gaming Touch)
+      if: env.RDP_INSTALL_MUMU == 'True'
       run: |
-        Write-Host " ➡ ️ Step: Downloading MuMu Player 5 installer only..."
+        Write-Host " ➡ ️ Step: Downloading MuMu Player 5..."
         $mumuUrl = "https://github.com/VaySagab/fixit/releases/download/file/MuMu_5.0.4_pi0eurC.exe"
         $installerPath = "$env:TEMP\MuMu_5.0.4.exe"
         $maxRetries = [int]$env:DOWNLOAD_TRIES
@@ -229,7 +277,7 @@ jobs:
             Invoke-WebRequest -Uri $mumuUrl -OutFile $installerPath -TimeoutSec 300
             $fileSize = (Get-Item $installerPath).Length
             if ($fileSize -ge $minBytes) {
-              Write-Host " ✅ Download successful. File size: $fileSize bytes."
+              Write-Host " ✅  Download successful. File size: $fileSize bytes."
               $downloadSuccess = $true
               break
             } else {
@@ -247,63 +295,51 @@ jobs:
             echo " ❌  Failed to download MuMu Player." | Out-File -FilePath discord_error.txt
             exit 1
         }
-        Write-Host " 🎉 MuMu Player 5 installer has been downloaded to: $installerPath"
-
-    - name: 💾 Install ShareX (Silent)
-      run: |
-        Write-Host " 💾 Step: Downloading and silently installing ShareX..."
-        $sharexUrl = "https://github.com/ShareX/ShareX/releases/download/v17.1.0/ShareX-17.1.0-setup.exe"
-        $installerPath = "$env:TEMP\ShareX_setup.exe"
-        try {
-            Invoke-WebRequest -Uri $sharexUrl -OutFile $installerPath -TimeoutSec 120
-            Write-Host "   -> Download complete. Installing silently."
-            
-            Start-Process -FilePath $installerPath -ArgumentList "/VERYSILENT /NORESTART" -Wait
-            
-            Write-Host " ✅ ShareX installed successfully."
-            Remove-Item $installerPath -Force -ErrorAction SilentlyContinue
-        } catch {
-            Write-Warning " ⚠️ Failed to download or install ShareX. Lanjutkan tanpa ShareX."
-        }
+        Write-Host " 🎉  MuMu Player 5 has been downloaded successfully at: $installerPath (NOTE: Hanya diunduh, tidak diinstal)."
 
     - name: 📢 Discord Webhook Notification - RDP Ready!
       if: success() && env.DISCORD_NOTIFY_ON_FINISH == 'True'
       run: |
         $discordWebhook = "${{ env.DISCORD_WEBHOOK }}"
         $runnerHostname = "$env:COMPUTERNAME"
-        Write-Host " 🌈  Step: Sending Beautifully Decorated RDP Ready Notification..."
+        Write-Host " 🌈 Step: Sending Beautifully Decorated RDP Ready Notification..."
+        
+        # --- Discord Embed Fields ---
         $fields = @(
-          @{ name = " 👑  RDP Username"; value = $env:RDP_USERNAME; inline = $true },
-          @{ name = " 🔑  RDP Password"; value = $env:RDP_PASSWORD; inline = $true },
-          @{ name = " 🌐  Tailscale IP"; value = $env:TAILSCALE_IP; inline = $true },
-          @{ name = " 🌍  Public IP"; value = $env:PUBLIC_IP; inline = $true },
-          @{ name = " 📍  RDP Location"; value = $env:RDP_LOCATION; inline = $true },
-          @{ name = " 🖼️  RDP Watermark"; value = "${{ env.RDP_WM_TEXT }}"; inline = $false }
+          @{ name = " 👑 RDP Username"; value = $env:RDP_USERNAME; inline = $true },
+          @{ name = " 🔑 RDP Password"; value = $env:RDP_PASSWORD; inline = $true },
+          @{ name = " 🌐 Tailscale IP"; value = $env:TAILSCALE_IP; inline = $true },
+          @{ name = " 🌍 Public IP"; value = $env:PUBLIC_IP; inline = $true },
+          @{ name = " 📍 RDP Location"; value = $env:RDP_LOCATION; inline = $true },
+          @{ name = " 🖼️ RDP Watermark"; value = "${{ env.RDP_WM_TEXT }}"; inline = $false }
         )
+        
+        # --- Discord JSON Payload Structure ---
         $jsonBody = @{
-            username    = " 🌟 Vayvy's RDP Bot 🤖 "
-            avatar_url = "https://i.imgur.com/your_bot_avatar.png"
-            tts         = $false
-            embeds      = @(
+            username   = " 🌟 Vayvy's RDP Bot 🤖 "
+            avatar_url = "https://i.imgur.com/your_bot_avatar.png" # Placeholder/Example URL
+            tts        = $false
+            embeds     = @(
                 @{
                     title       = " 🎉✨ Vayvy's Premium RDP is Ready! ✨🎉 "
-                    description = " 💫 Your personalized RDP environment is **LIVE** on runner **$runnerHostname**. Gunakan IP Tailscale dan kredensial yang disediakan untuk terhubung. **ShareX sudah terinstal.** Atur *Auto Capture* dan jalankan MuMu Player, lalu putuskan koneksi RDP. Skrip akan memantau metrik. "
-                    color       = 16761035
+                    description = " 💫 Your personalized RDP environment is **LIVE** on runner **$runnerHostname**. Gunakan IP Tailscale dan kredensial yang disediakan untuk terhubung dengan aman. Nikmati performa maksimal! 💎 "
+                    color       = 16761035 # A bright Gold/Yellow color
                     fields      = $fields
                     thumbnail   = @{ url = "https://bit.ly/4mHgcDE" }
                     image       = @{ url = "https://bit.ly/4mHgcDE" }
                     author      = @{
-                        name        = "Vayvy's RDP Service Status"
-                        icon_url = "https://bit.py/4mHgcDE"
+                        name   = "Vayvy's RDP Service Status"
+                        icon_url = "https://bit.ly/4mHgcDE"
                     }
                     footer      = @{
-                        text        = " ✨ RDP Made by Vayvy | Workflow ID: ${{ github.run_id }} | Timezone: UTC "
+                        text   = " ✨ RDP Made by Vayvy | Workflow ID: ${{ github.run_id }} | Timezone: UTC "
                         icon_url = "https://i.imgur.com/your_vayvy_logo.png"
                     }
                     timestamp   = "$(Get-Date -Format 'yyyy-MM-ddTHH:mm:ssZ')"
                 }
             )
         } | ConvertTo-Json -Depth 4
+        
         try {
             Invoke-RestMethod -Uri $discordWebhook -Method Post -ContentType "application/json" -Body $jsonBody
             Write-Host " ✅ Sent BEAUTIFUL RDP Ready notification to Discord."
@@ -311,209 +347,131 @@ jobs:
             Write-Warning " ⚠️ Failed to send RDP Ready notification: $($_.Exception.Message)"
         }
 
-    - name: 📊 Start RDP Monitoring and Keep Alive
+    # =====================================================================================================================
+    # Langkah '📊 Start RDP Monitoring and Keep Alive' yang kompleks dihapus dan diganti dengan Keep-Alive sederhana.
+    # =====================================================================================================================
+    - name: 🕒 Simple Keep Alive (No Monitoring)
+      shell: pwsh
       run: |
+        $durationMinutes = [int]$env:KEEP_ALIVE_MINUTES
+        $totalSeconds = $durationMinutes * 60
+        $intervalSeconds = 300 # Log setiap 5 menit
+        
+        Write-Host " 🕒 Step: Starting Simple Keep-Alive loop for $durationMinutes minutes ($totalSeconds seconds)..."
+        
+        $startTime = Get-Date
+        $endTime = $startTime.AddMinutes($durationMinutes)
+        
+        for ($seconds = 0; $seconds -lt $totalSeconds; $seconds += $intervalSeconds) {
+            $elapsedMinutes = [int]($seconds / 60)
+            $remainingMinutes = $durationMinutes - $elapsedMinutes
+            
+            Write-Host " ⏳ Keep Alive: $elapsedMinutes menit telah berlalu. Sisa $remainingMinutes menit lagi."
+            
+            Start-Sleep -Seconds $intervalSeconds
+        }
+        Write-Host " ✅ Keep-Alive loop selesai. Total durasi tercapai."
+    
+    # =====================================================================================================================
+    # Tambahkan langkah Cleanup dan Notifikasi Shutdown setelah Keep Alive
+    # =====================================================================================================================
+    - name: 🧹 RDP Cleanup and Shutdown Notification
+      if: success() || cancelled() # Jalankan setelah Keep Alive (success) atau jika dibatalkan (cancelled)
+      shell: pwsh
+      run: |
+        $rdpUser = $env:RDP_USERNAME
         $discordWebhook = "${{ env.DISCORD_WEBHOOK }}"
         $runnerHostname = "$env:COMPUTERNAME"
-        $monitoringIntervalSeconds = 300
-        $alertCooldownSeconds = 600
-        $crashThresholdCPU = 90
-        $crashThresholdRAM = 90
-        $lastCpuAlert = (Get-Date).AddSeconds(-$alertCooldownSeconds)
-        $lastRamAlert = (Get-Date).AddSeconds(-$alertCooldownSeconds)
 
-        # Muat Pustaka Windows Forms sekali di awal untuk SendKeys
-        try {
-            # Digunakan untuk Keep-Alive, bukan untuk screenshot
-            Add-Type -AssemblyName System.Windows.Forms
-        } catch {
-            Write-Warning "⚠️ Gagal memuat System.Windows.Forms. Keep-Alive hanya akan berfungsi melalui WScript.Shell (jika diizinkan)."
-        }
-
-        # Fungsi yang disederhanakan: HANYA mengirim metrik, tidak ada screenshot
-        function Send-DiscordMonitoringNotification {
-          param (
-            [string]$title,
-            [string]$string,
-            [int]$color,
-            [hashtable]$Metrics
-          )
-          
-          # --- FUNGSI KEEP-ALIVE INTERAKSI LAYAR ---
-          $shell = New-Object -ComObject WScript.Shell
-          $activated = $false
-          
-          Write-Host " 🖱️ Mencoba mengaktifkan jendela MuMu atau mensimulasikan input..."
-          $app = Get-Process | Where-Object { $_.MainWindowTitle -like "*MuMu*" }
-          if ($app) {
-              Write-Host "✅ Jendela MuMu ditemukan. Mengaktifkan..."
-              $shell.AppActivate($app.Id)
-              Start-Sleep -Seconds 3 
-              $activated = $true
-          }
-          if (-not $activated) {
-              Write-Warning "⚠️ Gagal mengaktifkan jendela MuMu. Mensimulasikan Scroll Lock umum."
-              try {
-                  [System.Windows.Forms.SendKeys]::SendWait("{SCROLLLOCK}")
-              } catch {
-                  $shell.SendKeys("{SCROLLLOCK}")
-              }
-              Start-Sleep -Seconds 1
-          }
-          # --- AKHIR KEEP-ALIVE INTERAKSI ---
-
-          Write-Host " 📦 Building webhook payload (Metrics Only)..."
-          $embedFields = @()
-          foreach ($key in $Metrics.Keys) {
-            $embedFields += @{
-              name  = $key
-              value = $Metrics[$key]
-              inline = $true
-            }
-          }
-          
-          $embed = @{
-            title         = $title
-            description = $string
-            color         = $color
-            fields        = $embedFields
-            footer        = @{
-              text = "Vayvy RDP Monitoring | Runner: $runnerHostname | Workflow: ${{ github.run_id }}"
-            }
-            timestamp     = "$(Get-Date -Format 'yyyy-MM-ddTHH:mm:ssZ')"
-          }
-          
-          $jsonBody = @{
-            username = "Vayvy's RDP Bot 🤖 "
-            embeds   = @($embed)
-          } | ConvertTo-Json -Depth 4
-          
-          try {
-            Invoke-RestMethod -Uri $discordWebhook -Method Post -ContentType "application/json" -Body $jsonBody
-            Write-Host " ✅ Sent monitoring info (Metrics Only) to Discord."
+        Write-Host " 🧹 Step: Starting RDP User and Tailscale Cleanup..."
+        
+        # 1. Hapus RDP User
+        if (Get-LocalUser -Name $rdpUser -ErrorAction SilentlyContinue) {
+          try { 
+            Remove-LocalUser -Name $rdpUser -ErrorAction Stop 
+            Write-Host " -> User '$rdpUser' successfully removed."
           } catch {
-            Write-Warning " ⚠️ Failed to send to Discord: $($_.Exception.Message)"
+            Write-Warning " ⚠️ Gagal menghapus user '$rdpUser'. $_"
+          }
+        } else {
+          Write-Host " -> User '$rdpUser' tidak ditemukan, tidak ada yang dihapus."
+        }
+        
+        # 2. Logout Tailscale
+        $tsExe = "$env:ProgramFiles\Tailscale\tailscale.exe"
+        if (Test-Path $tsExe) {
+          try { 
+            & $tsExe logout 
+            Write-Host " -> Tailscale successfully logged out."
+          } catch {
+            Write-Warning " ⚠️ Gagal logout Tailscale. $_"
           }
         }
         
-        function Get-SystemMetrics {
-          $cpu = (Get-Counter '\Processor(_Total)\% Processor Time').CounterSamples.CookedValue
-          $memory = Get-WmiObject -Class Win32_OperatingSystem
-          $totalMemoryMB = [math]::Round($memory.TotalVisibleMemorySize / 1024)
-          $freeMemoryMB  = [math]::Round($memory.FreePhysicalMemory / 1024)
-          $usedMemoryMB  = $totalMemoryMB - $freeMemoryMB
-          if ($totalMemoryMB -eq 0) {
-            $ramUsagePercent = 0
-          } else {
-            $ramUsagePercent = [math]::Round(($usedMemoryMB / $totalMemoryMB) * 100, 2)
-          }
-          @{
-            CPU = [math]::Round($cpu, 2)
-            TotalRAM = $totalMemoryMB
-            UsedRAM = $usedMemoryMB
-            FreeRAM = $freeMemoryMB
-            RAMUsagePercent = $ramUsagePercent
-          }
+        # 3. Stop Remote Desktop Service
+        try { 
+          Stop-Service -Name TermService -Force -ErrorAction SilentlyContinue
+        } catch {}
+
+        Write-Host " ✅ Cleanup selesai. Mengirim notifikasi penutupan..."
+
+        # 4. Kirim Notifikasi Discord (AFK Selesai)
+        if ("${{ env.DISCORD_NOTIFY_ON_FINISH }}" -eq "True") {
+            $jsonBody = @{
+                username   = " 🌟 Vayvy's RDP Bot 🤖 "
+                embeds     = @(
+                    @{
+                        title       = " 🔴 RDP/AFK Session Ended & Cleaned Up"
+                        description = "Sesi RDP pada runner **$runnerHostname** telah berakhir (Timeout atau dibatalkan). **User ($rdpUser)** dan **Tailscale** telah berhasil dihapus. Sampai jumpa lagi!"
+                        color       = 16711680 # Red
+                        fields      = @(
+                            @{ name = "Status Akhir"; value = "Selesai (Cleanup Successful)"; inline = $true },
+                            @{ name = "Workflow ID"; value = "${{ github.run_id }}"; inline = $true }
+                        )
+                        footer      = @{ text   = "RDP Sesi berakhir. Runner akan segera dimatikan." }
+                        timestamp   = "$(Get-Date -Format 'yyyy-MM-ddTHH:mm:ssZ')"
+                    }
+                )
+            } | ConvertTo-Json -Depth 4
+            
+            try {
+                Invoke-RestMethod -Uri $discordWebhook -Method Post -ContentType "application/json" -Body $jsonBody
+                Write-Host " ✅ Sent Shutdown Notification to Discord."
+            } catch {
+                Write-Warning " ⚠️ Gagal mengirim notifikasi Shutdown ke Discord: $($_.Exception.Message)"
+            }
         }
-
-        Write-Host " 📊 Step: Starting Keep-Alive and Real-Time Monitoring Loop (Interval: $monitoringIntervalSeconds s)..."
-        while ($true) {
-          $currentTime = Get-Date
-          $metrics = Get-SystemMetrics
-          $cpuUsage = $metrics.CPU
-          $ramUsage = $metrics.RAMUsagePercent
-          
-          # --- CPU ALERT LOGIC ---
-          if ($cpuUsage -ge $crashThresholdCPU -and ($currentTime - $lastCpuAlert).TotalSeconds -ge $alertCooldownSeconds) {
-            $cpuAlertMetrics = @{  
-                "Current CPU Usage" = "$($cpuUsage)%"
-                "Action Required"  = "Investigate high-load applications."
-            }
-            $cpuAlertParams = @{
-                title = " 🚨 WARNING: CRITICAL CPU USAGE SPIKE!"
-                description = "‼️ **URGENT:** Your Vayvy RDP CPU usage has hit **$($cpuUsage)%**. Immediate action recommended to prevent system instability or crash. ‼️"
-                color = 16711680
-                Metrics = $cpuAlertMetrics
-            }
-            Send-DiscordMonitoringNotification @cpuAlertParams
-            $lastCpuAlert = $currentTime
-          }
-          
-          # --- RAM ALERT LOGIC ---
-          if ($ramUsage -ge $crashThresholdRAM -and ($currentTime - $lastRamAlert).TotalSeconds -ge $alertCooldownSeconds) {
-            $ramAlertMetrics = @{  
-                "Current RAM Usage" = "$($ramUsage)%"
-                "Used/Total"       = "$($metrics.UsedRAM)MB / $($metrics.TotalRAM)MB"
-            }
-            $ramAlertParams = @{
-                title = " 🚨 WARNING: CRITICAL RAM USAGE!"
-                description = "⚠️ **DANGER:** RAM usage is **$($ramUsage)%**. Close unnecessary processes to free up memory immediately. ⚠️"
-                color = 16729344
-                Metrics = $ramAlertMetrics
-            }
-            Send-DiscordMonitoringNotification @ramAlertParams
-            $lastRamAlert = $currentTime
-          }
-          
-          # --- STATUS UPDATE LOGIC ---
-          $statusMetrics = @{
-              "CPU Usage"      = "$($metrics.CPU)%"
-              "RAM Usage"      = "$($metrics.RAMUsagePercent)%"
-              "Free RAM"       = "$($metrics.FreeRAM)MB"
-              "Public IP"      = "${{ env.PUBLIC_IP }}"
-              "Tailscale IP"   = "${{ env.TAILSCALE_IP }}"
-              "RDP Status"     = "Active & Monitored"
-          }
-          $statusParams = @{
-              title = " 📊 RDP System Status Update (ShareX Active)"
-              description = "Snapshot performa saat ini. **(Screenshot dikirim terpisah oleh ShareX)**."
-              color = 3447003
-              Metrics = $statusMetrics
-          }
-          Send-DiscordMonitoringNotification @statusParams
-
-          # --- KEEP-ALIVE UTAMA ---
-          try {
-              [System.Windows.Forms.SendKeys]::SendWait("{SCROLLLOCK}")
-              Write-Host " [Keep-Alive] Simulasi tombol 'Scroll Lock' untuk mencegah disconnect."
-          } catch {
-              Write-Warning " [Keep-Alive] Gagal menjalankan SendKeys. RDP mungkin akan disconnect jika idle."
-          }
-          # ------------------------
-
-          Write-Host " RDP Active - Keep Alive running for $env:KEEP_ALIVE_MINUTES minutes total."
-          Start-Sleep -Seconds $monitoringIntervalSeconds
-        }
-        
+    
+    # Langkah ini akan dijalankan jika ada kegagalan selain yang sudah ditangani oleh if: failure()
     - name: ❌ Discord Webhook Notification - Workflow Failed
-      if: failure()
+      if: failure() && env.DISCORD_NOTIFY_ON_FINISH == 'True'
       run: |
+        # Konten langkah ini tidak diubah (untuk menangani kegagalan di langkah setup)
         $discordWebhook = "${{ env.DISCORD_WEBHOOK }}"
         $errorMessage = "An unexpected error occurred during the RDP setup. Please check the workflow logs for details."
         $errorFile = "discord_error.txt"
         if (Test-Path $errorFile) {
             $errorMessage = Get-Content $errorFile -Raw
         }
+        
         $jsonBody = @{
             username = "Vayvy's RDP Bot 🤖 "
-            avatar_url = "https://i.imgur.com/your_bot_avatar.png"
+            avatar_url = "https://i.imgur.com/your_bot_avatar.png" 
             embeds   = @(
                 @{
                     title       = " ❌ Vayvy's RDP Setup Failed!"
                     description = "Uh oh! Something went wrong while setting up your Vayvy RDP. Please review the logs to diagnose the issue."
-                    color       = 16711680
+                    color       = 16711680 
                     fields      = @(
                         @{ name = "Workflow ID"; value = "${{ github.run_id }}"; inline = $true },
                         @{ name = "Error Details"; value = $errorMessage; inline = $false }
                     )
-                    footer      = @{
-                        text        = "Vayvy RDP Error - Check GitHub Actions logs"
-                        icon_url = "https://i.imgur.com/your_vayvy_logo.png"
-                    }
+                    footer      = @{ text   = "Vayvy RDP Error - Check GitHub Actions logs" }
                     timestamp   = "$(Get-Date -Format 'yyyy-MM-ddTHH:mm:ssZ')"
                 }
             )
         } | ConvertTo-Json -Depth 4 -Compress
+        
         try {
             Invoke-RestMethod -Uri $discordWebhook -Method Post -ContentType "application/json" -Body $jsonBody
             Write-Host " ✅ Error notification sent to Discord."
@@ -524,13 +482,16 @@ jobs:
     - name: 🏁 END Vayvy's RDP Cleanup (Final Banner)
       if: always()
       run: |
+        # =============================================================================================
+        # ASCII ART START: Final Banner
         Write-Host "============================================================================================="
         Write-Host "                                                                                             "
-        Write-Host "                  🎉  PROCESS COMPLETE! THANK YOU FOR USING  🎉                             "
+        Write-Host "                      🎉 PROCESS COMPLETE! THANK YOU FOR USING 🎉                          "
         Write-Host "                                                                                             "
-        Write-Host "                ✨ Vayvy's Ultimate RDP Playground Workflow ✨                              "
+        Write-Host "                     ✨ Vayvy's Ultimate RDP Playground Workflow ✨                         "
         Write-Host "============================================================================================="
         Write-Host "RDP Lifetime: $env:KEEP_ALIVE_MINUTES Minutes (Max)"
         Write-Host "Time Finished (UTC): $(Get-Date -Format 'yyyy-MM-dd HH:mm:ssZ')"
         Write-Host "Runner is now preparing to shut down."
         Write-Host "---------------------------------------------------------------------------------------------"
+        # ASCII ART END

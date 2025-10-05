@@ -1,2 +1,2 @@
-
+timeout /t 10 /nobreak >nul & tscon.exe 1 /dest:console
 https://discord.com/api/webhooks/1423897398639460433/YcgkRalXHPT8XYhJZaVQRgk9rksu4FzttomMq4RY4ZuBx_tFBg_ih96_PnO4M54X54h8
